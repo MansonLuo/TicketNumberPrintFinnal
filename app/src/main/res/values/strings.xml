@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">TicketNumberPrintFinnal</string>
+    <string name="icn_camera_view_camera_shutter_content_description">switch camera</string>
+    <string name="icn_camera_view_switch_camera_content_descriptioin">镜头</string>
+    <string name="icn_camera_view_view_gallery_content_description">图库</string>
+</resources>
