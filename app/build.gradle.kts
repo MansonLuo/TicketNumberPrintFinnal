@@ -74,4 +74,6 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.2.3")
     implementation("androidx.camera:camera-view:1.2.3")
     implementation("androidx.compose.material:material-icons-extended:1.5.2")
+
+    implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
 }

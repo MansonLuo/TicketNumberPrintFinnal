@@ -8,6 +8,8 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.core.net.toFile
+import com.example.ticketnumberprintfinnal.Tools
+import com.example.ticketnumberprintfinnal.tools.PathTool
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -42,6 +44,9 @@ fun ImageCapture.takePicture(
                 ) { _, uri ->
 
                 }
+                val savedPath = PathTool.getRealPathFromUri(context, saveUri)
+                val bitmap = Tools.bitmapClip(context, savedPath)
+                Tools.saveBitmap(bitmap, savedPath)
                 onImageCaptured(saveUri, false)
             }
 

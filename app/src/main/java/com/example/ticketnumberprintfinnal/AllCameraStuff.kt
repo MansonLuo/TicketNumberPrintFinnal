@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.bumptech.glide.integration.compose.GlideImage
 import com.example.ticketnumberprintfinnal.extentions.getCameraProvider
 import com.example.ticketnumberprintfinnal.extentions.getOutputDirectory
 import com.example.ticketnumberprintfinnal.extentions.takePicture
