@@ -44,9 +44,11 @@ fun ImageCapture.takePicture(
                 ) { _, uri ->
 
                 }
+                /*
                 val savedPath = PathTool.getRealPathFromUri(context, saveUri)
                 val bitmap = Tools.bitmapClip(context, savedPath)
                 Tools.saveBitmap(bitmap, savedPath)
+                 */
                 onImageCaptured(saveUri, false)
             }
 
