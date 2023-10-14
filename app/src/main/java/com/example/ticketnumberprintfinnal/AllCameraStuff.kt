@@ -29,11 +29,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.Lens
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,13 +45,20 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ticketnumberprintfinnal.extentions.getCameraProvider
 import com.example.ticketnumberprintfinnal.extentions.takePicture
 import com.example.ticketnumberprintfinnal.extentions.toPx
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @Composable
 fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureException) -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val viewmodel = viewModel<CameraViewModel>()
+
+
     var rotation = remember {
         Surface.ROTATION_0
     }
@@ -82,12 +91,26 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
 
     CameraPreviewView(
         imageCapture,
-        lensFacing,
         rotation,
+        viewmodel,
     ) { cameraUIAction ->
+
+        val myBeforeOnImageCapture: (Uri, Boolean) -> Unit = { uri, res ->
+            scope.launch {
+                viewmodel.recognizeTicketNumber(context, uri)
+                onImageCaptured(uri, res)
+            }
+        }
+
         when (cameraUIAction) {
             is CameraUIAction.OnCameraClick -> {
-                imageCapture.takePicture(context, lensFacing, onImageCaptured, onError)
+                scope.launch {
+                    imageCapture.takePicture(
+                        context,
+                        lensFacing,
+                        myBeforeOnImageCapture,
+                        onError)
+                }
             }
         }
     }
@@ -96,8 +119,8 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
 @Composable
 private fun CameraPreviewView(
     imageCapture: ImageCapture,
-    lensFacing: Int = CameraSelector.LENS_FACING_BACK,
     rotation: Int,
+    viewModel: CameraViewModel,
     cameraUIAction: (CameraUIAction) -> Unit
 ) {
     val context = LocalContext.current
@@ -106,7 +129,7 @@ private fun CameraPreviewView(
     val preview = Preview.Builder().build()
     val cameraSelector = remember {
         CameraSelector.Builder()
-            .requireLensFacing(lensFacing)
+            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
             .build()
     }
 
@@ -125,7 +148,7 @@ private fun CameraPreviewView(
 
     val viewPort = ViewPort.Builder(Rational(350.dp.toPx(context), 100.dp.toPx(context)), rotation).build()
 
-    LaunchedEffect(lensFacing) {
+    LaunchedEffect(CameraSelector.LENS_FACING_BACK) {
         val cameraProvider = context.getCameraProvider()
         cameraProvider.unbindAll()
         val useCaseGroup = UseCaseGroup.Builder()
@@ -148,6 +171,13 @@ private fun CameraPreviewView(
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
+
+        viewModel.recognizedNumber.value?.let {  number ->
+            Text(
+                text = number,
+                modifier = Modifier.align(Alignment.CenterStart)
+            )
+        }
 
         Column(
             modifier = Modifier.align(Alignment.BottomCenter),

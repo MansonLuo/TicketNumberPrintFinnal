@@ -30,11 +30,15 @@ import com.bumptech.glide.load.resource.drawable.DrawableResource
 import com.example.ticketnumberprintfinnal.ui.theme.TicketNumberPrintFinnalTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
         setContent {
             TicketNumberPrintFinnalTheme {
                 // A surface container using the 'background' color from the theme

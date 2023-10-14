@@ -19,13 +19,13 @@ import java.util.concurrent.Executors
 private const val FILENAME = "yyyy-MM-dd-HH-mm-ss-SSS"
 private const val PHOTO_EXTENSION = ".jpg"
 
-fun ImageCapture.takePicture(
+suspend fun ImageCapture.takePicture(
     context: Context,
     lensFacing: Int,
     onImageCaptured: (Uri, Boolean) -> Unit,
     onError: (ImageCaptureException) -> Unit
 ) {
-    val outputDirectory = context.getOutputDirectory()
+    val outputDirectory = File(context.getImageOutputRootDirectory())
     val photoFile = createFile(outputDirectory, FILENAME, PHOTO_EXTENSION)
     val outputFileOptions = getOutputFileOptions(lensFacing, photoFile)
 

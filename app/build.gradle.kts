@@ -76,4 +76,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.5.2")
 
     implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
+
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 }
