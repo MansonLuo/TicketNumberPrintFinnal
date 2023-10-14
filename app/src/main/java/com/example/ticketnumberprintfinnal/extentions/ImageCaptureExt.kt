@@ -8,12 +8,10 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.core.net.toFile
-import com.example.ticketnumberprintfinnal.Tools
-import com.example.ticketnumberprintfinnal.tools.PathTool
+import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.getImageOutputRootDirectory
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
 private const val FILENAME = "yyyy-MM-dd-HH-mm-ss-SSS"

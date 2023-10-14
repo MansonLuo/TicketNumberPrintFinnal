@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.sharp.Cancel
+import androidx.compose.material.icons.sharp.ClearAll
 import androidx.compose.material.icons.sharp.Lens
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,18 +47,27 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ticketnumberprintfinnal.extentions.getCameraProvider
+import com.example.ticketnumberprintfinnal.api.MbrushRepository
+import com.example.ticketnumberprintfinnal.api.RetrofitInstance
+import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.getCameraProvider
+import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
 import com.example.ticketnumberprintfinnal.extentions.takePicture
 import com.example.ticketnumberprintfinnal.extentions.toPx
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
 fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureException) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val viewmodel = viewModel<CameraViewModel>()
+    val mbrushRepository = remember {
+        MbrushRepository(RetrofitInstance.mBrushService)
+    }
+    val viewmodel = remember {
+        val vm = CameraViewModel(mbrushRepository)
+        vm.loadRootPath(context = context)
+
+        vm
+    }
 
 
     var rotation = remember {
@@ -97,7 +108,17 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
 
         val myBeforeOnImageCapture: (Uri, Boolean) -> Unit = { uri, res ->
             scope.launch {
-                viewmodel.recognizeTicketNumber(context, uri)
+                viewmodel.recognizeTicketNumber(context, uri) { recognizedNumber ->
+                    viewmodel.resetState()
+                    viewmodel.transformText(
+                        recognizedNumber,
+                        context = context
+                    )
+
+                    scope.launch {
+                        viewmodel.send()
+                    }
+                }
                 onImageCaptured(uri, res)
             }
         }
@@ -110,6 +131,16 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
                         lensFacing,
                         myBeforeOnImageCapture,
                         onError)
+                }
+            }
+
+            is CameraUIAction.OnCancelCameraClick -> {
+                (context as MainActivity).finish()
+            }
+
+            is CameraUIAction.OnClearAllPrintsClick -> {
+                scope.launch {
+                    viewmodel.removeUpload(context)
                 }
             }
         }
@@ -146,7 +177,7 @@ private fun CameraPreviewView(
     }
     preview.setSurfaceProvider(previewView.surfaceProvider)
 
-    val viewPort = ViewPort.Builder(Rational(350.dp.toPx(context), 100.dp.toPx(context)), rotation).build()
+    val viewPort = ViewPort.Builder(Rational(350.dp.toPx(context), 60.dp.toPx(context)), rotation).build()
 
     LaunchedEffect(CameraSelector.LENS_FACING_BACK) {
         val cameraProvider = context.getCameraProvider()
@@ -172,12 +203,26 @@ private fun CameraPreviewView(
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
 
-        viewModel.recognizedNumber.value?.let {  number ->
-            Text(
-                text = number,
-                modifier = Modifier.align(Alignment.CenterStart)
-            )
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            viewModel.recognizedNumber.value?.let {  number ->
+                Text(
+                    text = number,
+                    color = Color.White
+                )
+            }
+            viewModel.sendResult.value?.let {  state ->
+                Text(
+                    text = state,
+                    color = Color.White
+                )
+            }
         }
+
 
         Column(
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -197,18 +242,40 @@ fun CameraControls(
             .fillMaxWidth()
             .background(Color.Black)
             .padding(16.dp),
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         CameraControl(
+            Icons.Sharp.Cancel,
+            R.string.icn_camera_view_cancel_camera_description,
+            modifier = Modifier
+                .size(64.dp)
+                .padding(1.dp)
+                .border(1.dp, Color.White, CircleShape),
+            onClick = {
+                cameraUIAction(CameraUIAction.OnCancelCameraClick)
+            }
+        )
+        CameraControl(
             Icons.Sharp.Lens,
-            R.string.icn_camera_view_switch_camera_content_descriptioin,
+            R.string.icn_camera_view_camera_shutter_content_description,
             modifier = Modifier
                 .size(64.dp)
                 .padding(1.dp)
                 .border(1.dp, Color.White, CircleShape),
             onClick = {
                 cameraUIAction(CameraUIAction.OnCameraClick)
+            }
+        )
+        CameraControl(
+            Icons.Sharp.ClearAll,
+            R.string.icn_clear_all_prints_description,
+            modifier = Modifier
+                .size(64.dp)
+                .padding(1.dp)
+                .border(1.dp, Color.White, CircleShape),
+            onClick = {
+                cameraUIAction(CameraUIAction.OnClearAllPrintsClick)
             }
         )
     }
@@ -236,4 +303,6 @@ fun CameraControl(
 
 sealed class CameraUIAction {
     object OnCameraClick: CameraUIAction()
+    object OnCancelCameraClick: CameraUIAction()
+    object OnClearAllPrintsClick: CameraUIAction()
 }

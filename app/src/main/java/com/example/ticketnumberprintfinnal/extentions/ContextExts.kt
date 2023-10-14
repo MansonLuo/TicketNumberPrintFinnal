@@ -3,25 +3,58 @@ package com.example.ticketnumberprintfinnal.extentions
 import android.content.Context
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import com.cherryleafroad.kmagick.Magick
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import java.io.File
 
-suspend fun Context.getCameraProvider(): ProcessCameraProvider = suspendCoroutine {  continuation ->
-    ProcessCameraProvider.getInstance(this).also {  cameraProvider ->
-        cameraProvider.addListener({
-            continuation.resume(cameraProvider.get())
-        }, ContextCompat.getMainExecutor(this))
+class ContextExts {
+    companion object {
+
+        var magick: Magick? = null
+
+        fun Context.getMagick(): Magick {
+            if (magick == null) {
+                magick = Magick.initialize()
+            }
+
+            return magick!!
+        }
+
+        fun Context.deleteTmpRgbFile(filePath: String) {
+            File(filePath).delete()
+        }
+
+        fun Context.deleteAllMbdFile(rootPath: String) {
+            val rootDir = File(rootPath)
+
+            try {
+                rootDir.listFiles()?.forEach {
+                    it.delete()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        suspend fun Context.getCameraProvider(): ProcessCameraProvider =
+            suspendCoroutine { continuation ->
+                ProcessCameraProvider.getInstance(this).also { cameraProvider ->
+                    cameraProvider.addListener({
+                        continuation.resume(cameraProvider.get())
+                    }, ContextCompat.getMainExecutor(this))
+                }
+            }
+
+        fun Context.getImageOutputRootDirectory(): String {
+            var rootImageDirectory = ""
+
+            try {
+                rootImageDirectory = this.getExternalFilesDir("croppedImages")?.absolutePath!!
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            return rootImageDirectory
+        }
     }
-}
-
-fun Context.getImageOutputRootDirectory(): String {
-    var rootImageDirectory = ""
-
-    try {
-         rootImageDirectory = this.getExternalFilesDir("images")?.absolutePath!!
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-
-    return rootImageDirectory
 }

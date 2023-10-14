@@ -26,14 +26,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.load.resource.drawable.DrawableResource
 import com.example.ticketnumberprintfinnal.ui.theme.TicketNumberPrintFinnalTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 
 class MainActivity : ComponentActivity() {
+
+    external fun generateMBDFile(rgbFilePath: String, mbdFilePath: String)
+
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +62,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    companion object {
+        init {
+            System.loadLibrary("ticketnumberprintfinnal")
+        }
+    }
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)
@@ -70,14 +76,9 @@ fun App() {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        var imgUri by remember {
-            mutableStateOf<Uri?>(null)
-        }
-
         CameraView(
             onImageCaptured = { uri, fromGallery ->
                 Log.d("Main", "Image Uri Captured from Camera View: $uri")
-                imgUri = uri
             },
             onError = { imageCaptureException ->
                 Log.e("Main", "error")
@@ -94,17 +95,9 @@ fun App() {
             },
             modifier = Modifier
                 .width(350.dp)
-                .height(100.dp)
+                .height(60.dp)
                 .align(Alignment.Center)
         )
-
-        if (imgUri != null) {
-            GlideImage(
-                model = imgUri,
-                contentDescription = "",
-                modifier = Modifier.size(200.dp)
-            )
-        }
     }
 }
 
