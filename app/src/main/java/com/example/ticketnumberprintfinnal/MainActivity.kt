@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
@@ -44,8 +45,8 @@ class MainActivity : ComponentActivity() {
                     val state = rememberMultiplePermissionsState(
                         permissions = listOf(
                             Manifest.permission.CAMERA,
-                            Manifest.permission.READ_EXTERNAL_STORAGE,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            //Manifest.permission.READ_EXTERNAL_STORAGE,
+                            //Manifest.permission.WRITE_EXTERNAL_STORAGE
                         )
                     )
                     if (state.allPermissionsGranted) {
@@ -103,3 +104,8 @@ fun App() {
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun AppPreview() {
+    App()
+}

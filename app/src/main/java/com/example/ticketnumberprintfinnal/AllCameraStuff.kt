@@ -7,8 +7,6 @@ import android.view.OrientationEventListener
 import android.view.Surface
 import android.view.ViewGroup
 import android.widget.FrameLayout.LayoutParams
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -28,9 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.sharp.FlipCameraAndroid
 import androidx.compose.material.icons.sharp.Lens
-import androidx.compose.material.icons.sharp.PhotoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -38,7 +34,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,7 +44,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.ticketnumberprintfinnal.extentions.getCameraProvider
-import com.example.ticketnumberprintfinnal.extentions.getOutputDirectory
 import com.example.ticketnumberprintfinnal.extentions.takePicture
 import com.example.ticketnumberprintfinnal.extentions.toPx
 
@@ -59,7 +53,7 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
     var rotation = remember {
         Surface.ROTATION_0
     }
-    var lensFacing by remember {
+    val lensFacing by remember {
         mutableStateOf(CameraSelector.LENS_FACING_BACK)
     }
 
@@ -86,12 +80,6 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
 
     orientationEventListener.enable()
 
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-    ) { uri: Uri? ->
-        if (uri != null) onImageCaptured(uri, true)
-    }
-
     CameraPreviewView(
         imageCapture,
         lensFacing,
@@ -100,17 +88,6 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
         when (cameraUIAction) {
             is CameraUIAction.OnCameraClick -> {
                 imageCapture.takePicture(context, lensFacing, onImageCaptured, onError)
-            }
-            is CameraUIAction.OnSwitchCameraClick -> {
-                lensFacing =
-                    if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT
-                    else
-                        CameraSelector.LENS_FACING_BACK
-            }
-            is CameraUIAction.OnGalleryViewClick -> {
-                if (true == context.getOutputDirectory().listFiles()?.isNotEmpty()) {
-                    galleryLauncher.launch("image/*")
-                }
             }
         }
     }
@@ -190,16 +167,9 @@ fun CameraControls(
             .fillMaxWidth()
             .background(Color.Black)
             .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CameraControl(
-            Icons.Sharp.FlipCameraAndroid,
-            R.string.icn_camera_view_camera_shutter_content_description,
-            modifier = Modifier.size(64.dp),
-            onClick = { cameraUIAction(CameraUIAction.OnSwitchCameraClick)}
-        )
-
         CameraControl(
             Icons.Sharp.Lens,
             R.string.icn_camera_view_switch_camera_content_descriptioin,
@@ -211,16 +181,6 @@ fun CameraControls(
                 cameraUIAction(CameraUIAction.OnCameraClick)
             }
         )
-
-        CameraControl(
-            Icons.Sharp.PhotoLibrary,
-            R.string.icn_camera_view_view_gallery_content_description,
-            modifier = Modifier.size(64.dp),
-            onClick = {
-                cameraUIAction(CameraUIAction.OnGalleryViewClick)
-            }
-        )
-
     }
 }
 
@@ -246,6 +206,4 @@ fun CameraControl(
 
 sealed class CameraUIAction {
     object OnCameraClick: CameraUIAction()
-    object OnGalleryViewClick: CameraUIAction()
-    object OnSwitchCameraClick: CameraUIAction()
 }
