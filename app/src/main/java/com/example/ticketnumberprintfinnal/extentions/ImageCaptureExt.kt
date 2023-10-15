@@ -17,7 +17,7 @@ import java.util.concurrent.Executors
 private const val FILENAME = "yyyy-MM-dd-HH-mm-ss-SSS"
 private const val PHOTO_EXTENSION = ".jpg"
 
-suspend fun ImageCapture.takePicture(
+fun ImageCapture.takePicture(
     context: Context,
     lensFacing: Int,
     onImageCaptured: (Uri, Boolean) -> Unit,

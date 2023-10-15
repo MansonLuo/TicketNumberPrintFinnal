@@ -5,6 +5,7 @@ import android.util.Log
 import android.util.Rational
 import android.view.OrientationEventListener
 import android.view.Surface
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout.LayoutParams
 import androidx.camera.core.CameraSelector
@@ -22,8 +23,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.Cancel
@@ -50,7 +53,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.RetrofitInstance
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.getCameraProvider
-import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
 import com.example.ticketnumberprintfinnal.extentions.takePicture
 import com.example.ticketnumberprintfinnal.extentions.toPx
 import kotlinx.coroutines.launch
@@ -222,6 +224,20 @@ private fun CameraPreviewView(
                 )
             }
         }
+
+        AndroidView(
+            factory =  {
+                val view = View(it).apply {
+                    setBackgroundResource(R.drawable.background_drawable)
+                }
+
+                view
+            },
+            modifier = Modifier
+                .width(350.dp)
+                .height(60.dp)
+                .align(Alignment.Center)
+        )
 
 
         Column(
