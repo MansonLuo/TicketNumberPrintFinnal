@@ -3,7 +3,11 @@ package com.example.ticketnumberprintfinnal
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteAllMbdFile
@@ -12,6 +16,7 @@ import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
 import com.example.ticketnumberprintfinnal.extentions.saveJpgTo
 import com.example.ticketnumberprintfinnal.extentions.transformAndSaveToTmpRgb
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import java.io.File
@@ -31,10 +36,15 @@ class CameraViewModel(
     lateinit var rootTmpPath: String
     lateinit var tmpRgbFilePath: String
 
-    suspend fun recognizeTicketNumber(
+    var expanded by mutableStateOf<Boolean>(false)
+        private set
+    var cropBoxHeight by mutableStateOf<Dp>(60.dp)
+    var currentNumberOfTickets = 1
+
+    fun recognizeTicketNumber(
         context: Context,
         uri: Uri,
-        onRecognizeNumber: (String) -> Unit
+        onSuccess: (Text) -> Unit,
     ){
         lateinit var image: InputImage
 
@@ -46,15 +56,7 @@ class CameraViewModel(
 
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
-                // suppose only got one line text
-                // otherwise will throw exception
-                var extractedNumber = visionText.text
-
-                extractedNumber = extractedNumber.extractTicketNumber()
-
-                recognizedNumber.value = extractedNumber
-                sendResult.value = ""
-                onRecognizeNumber(extractedNumber)
+                onSuccess(visionText)
             }
             .addOnFailureListener {  e ->
                 e.printStackTrace()
@@ -108,5 +110,18 @@ class CameraViewModel(
         rootMbdPath = context.getExternalFilesDir("mbds")!!.absolutePath
         rootTmpPath = context.getExternalFilesDir("tmps")!!.absolutePath
         tmpRgbFilePath = "$rootTmpPath/tmp.rgb"
+    }
+
+    fun expandDropMenu() {
+        expanded = true
+    }
+
+    fun dismissDropMenu() {
+        expanded = false
+    }
+
+    fun changeCropBoxHeight(number: Int) {
+        currentNumberOfTickets
+        cropBoxHeight = (number * 60).dp
     }
 }

@@ -17,6 +17,7 @@ import androidx.camera.core.ViewPort
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,14 +25,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.More
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.sharp.Cancel
 import androidx.compose.material.icons.sharp.ClearAll
 import androidx.compose.material.icons.sharp.Lens
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -41,18 +48,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.RetrofitInstance
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.getCameraProvider
+import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
 import com.example.ticketnumberprintfinnal.extentions.takePicture
 import com.example.ticketnumberprintfinnal.extentions.toPx
 import kotlinx.coroutines.launch
@@ -95,7 +106,7 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
                 }
 
                 imageCapture.targetRotation = rotation
-                Log.d("Main", "ratation: $rotation")
+                //Log.d("Main", "ratation: $rotation")
             }
         }
     }
@@ -110,17 +121,54 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
 
         val myBeforeOnImageCapture: (Uri) -> Unit = { uri ->
             scope.launch {
-                viewmodel.recognizeTicketNumber(context, uri) { recognizedNumber ->
-                    viewmodel.resetState()
-                    viewmodel.transformText(
-                        recognizedNumber,
-                        context = context
-                    )
+                viewmodel.recognizeTicketNumber(
+                    context,
+                    uri,
+                    onSuccess = { visionText ->
+                        // suppose only got one line text
+                        // otherwise will throw exception
+                        var allLines = mutableListOf<String>()
 
-                    scope.launch {
-                        viewmodel.send()
-                    }
-                }
+                        for (block in visionText.textBlocks) {
+                            for (line in block.lines) {
+                                allLines.add(line.text)
+                            }
+                        }
+
+
+                        if (allLines.isEmpty()) {
+                            viewmodel.resetState()
+
+                            viewmodel.transformText(
+                                "无法识别",
+                                context
+                            )
+                            scope.launch {
+                                viewmodel.send()
+                            }
+
+                            viewmodel.recognizedNumber.value = "无法识别"
+                            viewmodel.sendResult.value = ""
+                        } else {
+                            allLines.subList(0, viewmodel.currentNumberOfTickets)
+                                .forEach { recognizedTextLine ->
+                                    val ticketNumber = recognizedTextLine.extractTicketNumber()
+                                    viewmodel.resetState()
+
+                                    viewmodel.transformText(
+                                        ticketNumber,
+                                        context
+                                    )
+                                    scope.launch {
+                                        viewmodel.send()
+                                    }
+
+                                    viewmodel.recognizedNumber.value = ticketNumber
+                                    viewmodel.sendResult.value = ""
+                                }
+                        }
+                    },
+                )
                 onImageCaptured(uri)
             }
         }
@@ -132,7 +180,8 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
                         context,
                         lensFacing,
                         myBeforeOnImageCapture,
-                        onError)
+                        onError
+                    )
                 }
             }
 
@@ -179,7 +228,10 @@ private fun CameraPreviewView(
     }
     preview.setSurfaceProvider(previewView.surfaceProvider)
 
-    val viewPort = ViewPort.Builder(Rational(350.dp.toPx(context), 60.dp.toPx(context)), rotation).build()
+    val viewPort = ViewPort.Builder(
+        Rational(350.dp.toPx(context), viewModel.cropBoxHeight.toPx(context)),
+        rotation
+    ).build()
 
     LaunchedEffect(CameraSelector.LENS_FACING_BACK) {
         val cameraProvider = context.getCameraProvider()
@@ -202,7 +254,9 @@ private fun CameraPreviewView(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
         AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
 
         Row(
@@ -211,13 +265,13 @@ private fun CameraPreviewView(
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            viewModel.recognizedNumber.value?.let {  number ->
+            viewModel.recognizedNumber.value?.let { number ->
                 Text(
                     text = number,
                     color = Color.White
                 )
             }
-            viewModel.sendResult.value?.let {  state ->
+            viewModel.sendResult.value?.let { state ->
                 Text(
                     text = state,
                     color = Color.White
@@ -226,7 +280,7 @@ private fun CameraPreviewView(
         }
 
         AndroidView(
-            factory =  {
+            factory = {
                 val view = View(it).apply {
                     setBackgroundResource(R.drawable.background_drawable)
                 }
@@ -235,8 +289,19 @@ private fun CameraPreviewView(
             },
             modifier = Modifier
                 .width(350.dp)
-                .height(60.dp)
+                .height(viewModel.cropBoxHeight)
                 .align(Alignment.Center)
+        )
+
+        More(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .offset(x = -10.dp, y = 250.dp)
+                .background(Color.Blue),
+            expanded = viewModel.expanded,
+            onExpanded = viewModel::expandDropMenu,
+            onDismiss = viewModel::dismissDropMenu,
+            onNumberSelected = viewModel::changeCropBoxHeight
         )
 
 
@@ -245,6 +310,105 @@ private fun CameraPreviewView(
             verticalArrangement = Arrangement.Bottom
         ) {
             CameraControls(cameraUIAction)
+        }
+    }
+}
+
+@Composable
+fun More(
+    modifier: Modifier = Modifier,
+    expanded: Boolean,
+    onExpanded: () -> Unit,
+    onDismiss: () -> Unit,
+    onNumberSelected: (Int) -> Unit
+) {
+    Box(
+        modifier = modifier
+            .wrapContentSize(Alignment.TopEnd)
+    ) {
+        IconButton(
+            onClick = onExpanded,
+        ) {
+            Icon(
+                modifier = Modifier.size(50.dp),
+                imageVector = Icons.Default.More,
+                contentDescription = "More"
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismiss,
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(text = "7")
+                },
+                onClick = {
+                    onNumberSelected(7)
+                    onDismiss()
+                }
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(text = "6")
+                },
+                onClick = {
+                    onNumberSelected(6)
+                    onDismiss()
+                }
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(text = "5")
+                },
+                onClick = {
+                    onNumberSelected(5)
+                    onDismiss()
+                }
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(text = "4")
+                },
+                onClick = {
+                    onNumberSelected(4)
+                    onDismiss()
+                }
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(text = "3")
+                },
+                onClick = {
+                    onNumberSelected(3)
+                    onDismiss()
+                }
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(text = "2")
+                },
+                onClick = {
+                    onNumberSelected(2)
+                    onDismiss()
+                }
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(text = "1")
+                },
+                onClick = {
+                    onNumberSelected(1)
+                    onDismiss()
+                }
+            )
         }
     }
 }
@@ -318,7 +482,7 @@ fun CameraControl(
 }
 
 sealed class CameraUIAction {
-    object OnCameraClick: CameraUIAction()
-    object OnCancelCameraClick: CameraUIAction()
-    object OnClearAllPrintsClick: CameraUIAction()
+    object OnCameraClick : CameraUIAction()
+    object OnCancelCameraClick : CameraUIAction()
+    object OnClearAllPrintsClick : CameraUIAction()
 }

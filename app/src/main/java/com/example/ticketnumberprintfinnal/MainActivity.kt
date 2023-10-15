@@ -65,10 +65,10 @@ fun App() {
     ) {
         CameraView(
             onImageCaptured = { uri ->
-                Log.d("Main", "Image Uri Captured from Camera View: $uri")
+                //Log.d("Main", "Image Uri Captured from Camera View: $uri")
             },
             onError = { imageCaptureException ->
-                Log.e("Main", imageCaptureException.message.toString())
+                //Log.e("Main", imageCaptureException.message.toString())
             }
         )
 
