@@ -64,11 +64,11 @@ fun App() {
         modifier = Modifier.fillMaxSize()
     ) {
         CameraView(
-            onImageCaptured = { uri, fromGallery ->
+            onImageCaptured = { uri ->
                 Log.d("Main", "Image Uri Captured from Camera View: $uri")
             },
             onError = { imageCaptureException ->
-                Log.e("Main", "error")
+                Log.e("Main", imageCaptureException.message.toString())
             }
         )
 

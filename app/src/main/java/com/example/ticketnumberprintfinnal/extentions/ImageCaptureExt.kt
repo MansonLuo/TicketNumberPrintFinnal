@@ -1,6 +1,7 @@
 package com.example.ticketnumberprintfinnal.extentions
 
 import android.content.Context
+import android.media.MediaActionSound
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.webkit.MimeTypeMap
@@ -20,12 +21,14 @@ private const val PHOTO_EXTENSION = ".jpg"
 fun ImageCapture.takePicture(
     context: Context,
     lensFacing: Int,
-    onImageCaptured: (Uri, Boolean) -> Unit,
+    onImageCaptured: (Uri) -> Unit,
     onError: (ImageCaptureException) -> Unit
 ) {
     val outputDirectory = File(context.getImageOutputRootDirectory())
     val photoFile = createFile(outputDirectory, FILENAME, PHOTO_EXTENSION)
     val outputFileOptions = getOutputFileOptions(lensFacing, photoFile)
+
+    MediaActionSound().play(MediaActionSound.SHUTTER_CLICK)
 
     this.takePicture(
         outputFileOptions,
@@ -47,7 +50,7 @@ fun ImageCapture.takePicture(
                 val bitmap = Tools.bitmapClip(context, savedPath)
                 Tools.saveBitmap(bitmap, savedPath)
                  */
-                onImageCaptured(saveUri, false)
+                onImageCaptured(saveUri)
             }
 
             override fun onError(exception: ImageCaptureException) {

@@ -2,6 +2,7 @@ package com.example.ticketnumberprintfinnal
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.example.ticketnumberprintfinnal.api.MbrushRepository

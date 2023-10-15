@@ -58,7 +58,7 @@ import com.example.ticketnumberprintfinnal.extentions.toPx
 import kotlinx.coroutines.launch
 
 @Composable
-fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureException) -> Unit) {
+fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val mbrushRepository = remember {
@@ -108,7 +108,7 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
         viewmodel,
     ) { cameraUIAction ->
 
-        val myBeforeOnImageCapture: (Uri, Boolean) -> Unit = { uri, res ->
+        val myBeforeOnImageCapture: (Uri) -> Unit = { uri ->
             scope.launch {
                 viewmodel.recognizeTicketNumber(context, uri) { recognizedNumber ->
                     viewmodel.resetState()
@@ -121,7 +121,7 @@ fun CameraView(onImageCaptured: (Uri, Boolean) -> Unit, onError: (ImageCaptureEx
                         viewmodel.send()
                     }
                 }
-                onImageCaptured(uri, res)
+                onImageCaptured(uri)
             }
         }
 

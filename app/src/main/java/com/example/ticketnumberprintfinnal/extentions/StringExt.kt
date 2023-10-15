@@ -79,5 +79,7 @@ fun String.getRandomFileName(): String {
 }
 
 fun String.extractTicketNumber(): String {
-    return this.replace("[^0-9]".toRegex(), "")
+    val res = this.replace("[^0-9]".toRegex(), "")
+
+    return if (res.isBlank()) "无法识别" else res
 }
