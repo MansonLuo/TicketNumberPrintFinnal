@@ -127,7 +127,7 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
                     onSuccess = { visionText ->
                         // suppose only got one line text
                         // otherwise will throw exception
-                        var allLines = mutableListOf<String>()
+                        val allLines = mutableListOf<String>()
 
                         for (block in visionText.textBlocks) {
                             for (line in block.lines) {
