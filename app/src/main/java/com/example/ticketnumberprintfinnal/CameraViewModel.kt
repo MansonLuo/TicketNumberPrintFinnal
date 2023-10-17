@@ -3,7 +3,10 @@ package com.example.ticketnumberprintfinnal
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
@@ -14,6 +17,7 @@ import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.dele
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteTmpRgbFile
 import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
 import com.example.ticketnumberprintfinnal.extentions.saveJpgTo
+import com.example.ticketnumberprintfinnal.extentions.takePicture
 import com.example.ticketnumberprintfinnal.extentions.transformAndSaveToTmpRgb
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
@@ -27,6 +31,8 @@ class CameraViewModel(
 ): ViewModel() {
     val recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
     val recognizedNumber = mutableStateOf<String?>(null)
+    val recognizedNumberList = mutableStateListOf<String>()
+    var currentNumberOfTickets = mutableStateOf<Int>(1)
 
     val sendResult = mutableStateOf<String?>(null)
     var imageUri = mutableStateOf<Uri?>(null)
@@ -39,12 +45,11 @@ class CameraViewModel(
     var expanded by mutableStateOf<Boolean>(false)
         private set
     var cropBoxHeight by mutableStateOf<Dp>(60.dp)
-    var currentNumberOfTickets = 1
 
     fun recognizeTicketNumber(
         context: Context,
         uri: Uri,
-        onSuccess: (Text) -> Unit,
+        onSuccess: () -> Unit,
     ){
         lateinit var image: InputImage
 
@@ -56,7 +61,43 @@ class CameraViewModel(
 
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
-                onSuccess(visionText)
+                // suppose only got one line text
+                // otherwise will throw exception
+                val allLines = mutableListOf<String>()
+                val wantedLines = mutableListOf<String>()
+
+                for (block in visionText.textBlocks) {
+                    for (line in block.lines) {
+                        //allLines.add(line.text)
+                        recognizedNumberList.add(line.text)
+                    }
+                }
+
+                /*
+                recognizedNumberList.clear()
+
+                if (allLines.isEmpty()) {
+                    recognizedNumberList.add("无法识别")
+                } else {
+                    if (allLines.size < currentNumberOfTickets.value) {
+                        wantedLines.apply {
+                            addAll(allLines)
+                        }
+                    } else {
+                        wantedLines.apply {
+                            addAll(
+                                allLines.subList(0, currentNumberOfTickets.value)
+                            )
+                        }
+                    }
+                    wantedLines.map {  recognizedTextLine ->
+                        recognizedNumberList.add(
+                            recognizedTextLine.extractTicketNumber()
+                        )
+                    }
+                }
+                 */
+                onSuccess()
             }
             .addOnFailureListener {  e ->
                 e.printStackTrace()
@@ -121,7 +162,29 @@ class CameraViewModel(
     }
 
     fun changeCropBoxHeight(number: Int) {
-        currentNumberOfTickets
+        currentNumberOfTickets.value = number
         cropBoxHeight = (number * 60).dp
+    }
+
+    fun takePictureAndSendMbdFiles(
+        context: Context,
+        imageCapture: ImageCapture
+    ) {
+        // take picture
+        imageCapture.takePicture(
+            context,
+            onError = { e -> e.printStackTrace()},
+        ) { imageFieUri ->
+            // recognize ticket numbers
+            recognizeTicketNumber(
+                context,
+                imageFieUri
+            ) {
+            }
+
+            // transform numbers to mbd files
+
+            // send mbd files
+        }
     }
 }

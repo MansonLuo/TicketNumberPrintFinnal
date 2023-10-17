@@ -118,7 +118,7 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
         rotation,
         viewmodel,
     ) { cameraUIAction ->
-
+        /*
         val myBeforeOnImageCapture: (Uri) -> Unit = { uri ->
             scope.launch {
                 viewmodel.recognizeTicketNumber(
@@ -172,9 +172,11 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
                 onImageCaptured(uri)
             }
         }
+         */
 
         when (cameraUIAction) {
             is CameraUIAction.OnCameraClick -> {
+                /*
                 scope.launch {
                     imageCapture.takePicture(
                         context,
@@ -183,6 +185,11 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
                         onError
                     )
                 }
+                */
+                viewmodel.takePictureAndSendMbdFiles(
+                    context,
+                    imageCapture
+                )
             }
 
             is CameraUIAction.OnCancelCameraClick -> {
@@ -229,7 +236,8 @@ private fun CameraPreviewView(
     preview.setSurfaceProvider(previewView.surfaceProvider)
 
     val viewPort = ViewPort.Builder(
-        Rational(350.dp.toPx(context), viewModel.cropBoxHeight.toPx(context)),
+        //Rational(350.dp.toPx(context), viewModel.cropBoxHeight.toPx(context)),
+        Rational(350, viewModel.cropBoxHeight.value.toInt()),
         rotation
     ).build()
 
@@ -265,11 +273,23 @@ private fun CameraPreviewView(
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            /*
             viewModel.recognizedNumber.value?.let { number ->
                 Text(
                     text = number,
                     color = Color.White
                 )
+            }
+             */
+            if (viewModel.recognizedNumberList.isNotEmpty()) {
+                Column {
+                    viewModel.recognizedNumberList.forEach {
+                        Text(
+                            text = it,
+                            color = Color.White
+                        )
+                    }
+                }
             }
             viewModel.sendResult.value?.let { state ->
                 Text(

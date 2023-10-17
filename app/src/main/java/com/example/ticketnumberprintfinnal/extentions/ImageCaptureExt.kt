@@ -20,13 +20,12 @@ private const val PHOTO_EXTENSION = ".jpg"
 
 fun ImageCapture.takePicture(
     context: Context,
-    lensFacing: Int,
-    onImageCaptured: (Uri) -> Unit,
-    onError: (ImageCaptureException) -> Unit
+    onError: (ImageCaptureException) -> Unit,
+    onImageCaptured: (Uri) -> Unit
 ) {
     val outputDirectory = File(context.getImageOutputRootDirectory())
     val photoFile = createFile(outputDirectory, FILENAME, PHOTO_EXTENSION)
-    val outputFileOptions = getOutputFileOptions(lensFacing, photoFile)
+    val outputFileOptions = getOutputFileOptions(CameraSelector.LENS_FACING_BACK, photoFile)
 
     MediaActionSound().play(MediaActionSound.SHUTTER_CLICK)
 
