@@ -8,6 +8,7 @@ import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout.LayoutParams
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -54,11 +55,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.RetrofitInstance
@@ -91,7 +94,9 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
     }
 
     val imageCapture: ImageCapture = remember {
-        ImageCapture.Builder().build()
+        ImageCapture
+            .Builder()
+            .build()
     }
 
     val orientationEventListener = remember {
@@ -214,8 +219,11 @@ private fun CameraPreviewView(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
 
-    val preview = Preview.Builder().build()
+    val preview = Preview
+        .Builder()
+        .build()
     val cameraSelector = remember {
         CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
@@ -236,8 +244,7 @@ private fun CameraPreviewView(
     preview.setSurfaceProvider(previewView.surfaceProvider)
 
     val viewPort = ViewPort.Builder(
-        //Rational(350.dp.toPx(context), viewModel.cropBoxHeight.toPx(context)),
-        Rational(350, viewModel.cropBoxHeight.value.toInt()),
+        Rational(screenWidthDp.dp.toPx(context), viewModel.cropBoxHeight.toPx(context)),
         rotation
     ).build()
 
@@ -281,6 +288,10 @@ private fun CameraPreviewView(
                 )
             }
              */
+            Text(
+                text = viewModel.cropBoxHeight.toString(),
+                color = Color.White
+            )
             if (viewModel.recognizedNumberList.isNotEmpty()) {
                 Column {
                     viewModel.recognizedNumberList.forEach {
@@ -308,7 +319,7 @@ private fun CameraPreviewView(
                 view
             },
             modifier = Modifier
-                .width(350.dp)
+                .width(screenWidthDp.dp)
                 .height(viewModel.cropBoxHeight)
                 .align(Alignment.Center)
         )
