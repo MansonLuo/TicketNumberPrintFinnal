@@ -69,9 +69,12 @@ class CameraViewModel(
                 for (block in visionText.textBlocks) {
                     for (line in block.lines) {
                         //allLines.add(line.text)
-                        recognizedNumberList.add(line.text)
+                        val res = line.text.extractTicketNumber()
+
+                        recognizedNumberList.add(res)
                     }
                 }
+                recognizedNumberList.add(visionText.text)
 
                 /*
                 recognizedNumberList.clear()

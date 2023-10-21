@@ -78,8 +78,19 @@ fun String.getRandomFileName(): String {
     return currentTime.format(Date()).toString().replace(":", "")
 }
 
+/*
 fun String.extractTicketNumber(): String {
     val res = this.replace("[^0-9]".toRegex(), "")
 
     return if (res.isBlank()) "无法识别" else res
+}
+ */
+
+fun String.extractTicketNumber(): String {
+    val pattern = "\\d{9,15}"
+    val regex = Regex(pattern)
+
+    val res: String = regex.find(this)?.value ?: "无法识别"
+
+    return res
 }
