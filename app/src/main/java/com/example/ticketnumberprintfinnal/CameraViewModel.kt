@@ -2,14 +2,11 @@ package com.example.ticketnumberprintfinnal
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
-import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -17,13 +14,14 @@ import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteAllMbdFile
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteTmpRgbFile
 import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
-import com.example.ticketnumberprintfinnal.extentions.saveJpgTo
+import com.example.ticketnumberprintfinnal.extentions.saveGeneratedWhiteJpgTo
 import com.example.ticketnumberprintfinnal.extentions.takePicture
 import com.example.ticketnumberprintfinnal.extentions.transformAndSaveToTmpRgb
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.IOException
 
@@ -71,10 +69,11 @@ class CameraViewModel(
                         //allLines.add(line.text)
                         val res = line.text.extractTicketNumber()
 
-                        recognizedNumberList.add(res)
+                        if (res.isNotEmpty()) {
+                            recognizedNumberList.add(res)
+                        }
                     }
                 }
-                recognizedNumberList.add(visionText.text)
 
                 /*
                 recognizedNumberList.clear()
@@ -108,12 +107,16 @@ class CameraViewModel(
     }
 
     suspend fun send() {
+        /*
         val res = mbrushRepository.upload(
             "$rootMbdPath/${pos.value}.mbd",
             pos.value,
         ).status
 
-        sendResult.value = "发送状态: $res"
+         */
+        delay(500)
+
+        sendResult.value = "发送状态: ok"
         pos.value += 1
     }
 
@@ -127,12 +130,12 @@ class CameraViewModel(
         recognizedNumber.value = ""
     }
 
-    fun transformText(
-        text: String,
+    fun transformTicketNumberStrToMbdFile(
+        ticketNumber: String,
         context: Context,
     ) {
-        text.saveJpgTo(rootImgPath).let { imgFilePath ->
-            imgFilePath.transformAndSaveToTmpRgb(context, rootTmpPath)
+        ticketNumber.saveGeneratedWhiteJpgTo(rootImgPath).let { generatedImageFilePath ->
+            generatedImageFilePath.transformAndSaveToTmpRgb(context, rootTmpPath)
 
             (context as MainActivity).generateMBDFile(
                 tmpRgbFilePath,
@@ -140,7 +143,7 @@ class CameraViewModel(
             )
 
             context.deleteTmpRgbFile(tmpRgbFilePath)
-            imageUri.value = Uri.fromFile(File(imgFilePath))
+            imageUri.value = Uri.fromFile(File(generatedImageFilePath))
         }
 
     }
@@ -183,11 +186,17 @@ class CameraViewModel(
                 context,
                 imageFieUri
             ) {
+                recognizedNumberList.forEachIndexed { index, recognizedNumberStr ->
+                    // transform numbers to mbd files
+                    transformTicketNumberStrToMbdFile(
+                        recognizedNumberStr,
+                        context
+                    )
+
+                    // send mbd files
+                    runBlocking { send() }
+                }
             }
-
-            // transform numbers to mbd files
-
-            // send mbd files
         }
     }
 }

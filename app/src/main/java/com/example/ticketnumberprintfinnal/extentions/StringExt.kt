@@ -23,7 +23,7 @@ fun String.selectNumberText(): String {
     }.first()
 }
 
-fun String.saveJpgTo(rootPath: String): String {
+fun String.saveGeneratedWhiteJpgTo(rootPath: String): String {
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     paint.textSize = 80f
     paint.color = Color.BLACK
@@ -90,7 +90,7 @@ fun String.extractTicketNumber(): String {
     val pattern = "\\d{9,15}"
     val regex = Regex(pattern)
 
-    val res: String = regex.find(this)?.value ?: "无法识别"
+    val res: String = regex.find(this)?.value ?: ""
 
     return res
 }

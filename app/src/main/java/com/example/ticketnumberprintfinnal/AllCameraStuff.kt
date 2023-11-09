@@ -220,10 +220,13 @@ private fun CameraPreviewView(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val cropBoxHeight = LocalConfiguration.current.screenHeightDp / 3
 
-    val preview = Preview
-        .Builder()
-        .build()
+    val preview = remember {
+        Preview
+            .Builder()
+            .build()
+    }
     val cameraSelector = remember {
         CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
@@ -231,7 +234,7 @@ private fun CameraPreviewView(
     }
 
     val previewView = remember {
-        PreviewView(context).apply {
+        val previewView = PreviewView(context).apply {
             scaleType = PreviewView.ScaleType.FIT_CENTER
 
             val layoutParams = LayoutParams(
@@ -240,13 +243,18 @@ private fun CameraPreviewView(
             )
             setLayoutParams(layoutParams)
         }
-    }
-    preview.setSurfaceProvider(previewView.surfaceProvider)
 
-    val viewPort = ViewPort.Builder(
-        Rational(screenWidthDp.dp.toPx(context), viewModel.cropBoxHeight.toPx(context)),
-        rotation
-    ).build()
+        preview.setSurfaceProvider(previewView.surfaceProvider)
+
+        previewView
+    }
+
+    val viewPort = remember {
+        ViewPort.Builder(
+            Rational(screenWidthDp.dp.toPx(context), cropBoxHeight.dp.toPx(context)),//viewModel.cropBoxHeight.toPx(context)),
+            rotation
+        ).build()
+    }
 
     LaunchedEffect(CameraSelector.LENS_FACING_BACK) {
         val cameraProvider = context.getCameraProvider()
@@ -320,21 +328,9 @@ private fun CameraPreviewView(
             },
             modifier = Modifier
                 .width(screenWidthDp.dp)
-                .height(viewModel.cropBoxHeight)
+                .height(cropBoxHeight.dp)
                 .align(Alignment.Center)
         )
-
-        More(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset(x = -10.dp, y = 250.dp)
-                .background(Color.Blue),
-            expanded = viewModel.expanded,
-            onExpanded = viewModel::expandDropMenu,
-            onDismiss = viewModel::dismissDropMenu,
-            onNumberSelected = viewModel::changeCropBoxHeight
-        )
-
 
         Column(
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -345,104 +341,6 @@ private fun CameraPreviewView(
     }
 }
 
-@Composable
-fun More(
-    modifier: Modifier = Modifier,
-    expanded: Boolean,
-    onExpanded: () -> Unit,
-    onDismiss: () -> Unit,
-    onNumberSelected: (Int) -> Unit
-) {
-    Box(
-        modifier = modifier
-            .wrapContentSize(Alignment.TopEnd)
-    ) {
-        IconButton(
-            onClick = onExpanded,
-        ) {
-            Icon(
-                modifier = Modifier.size(50.dp),
-                imageVector = Icons.Default.More,
-                contentDescription = "More"
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = onDismiss,
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(text = "7")
-                },
-                onClick = {
-                    onNumberSelected(7)
-                    onDismiss()
-                }
-            )
-
-            DropdownMenuItem(
-                text = {
-                    Text(text = "6")
-                },
-                onClick = {
-                    onNumberSelected(6)
-                    onDismiss()
-                }
-            )
-
-            DropdownMenuItem(
-                text = {
-                    Text(text = "5")
-                },
-                onClick = {
-                    onNumberSelected(5)
-                    onDismiss()
-                }
-            )
-
-            DropdownMenuItem(
-                text = {
-                    Text(text = "4")
-                },
-                onClick = {
-                    onNumberSelected(4)
-                    onDismiss()
-                }
-            )
-
-            DropdownMenuItem(
-                text = {
-                    Text(text = "3")
-                },
-                onClick = {
-                    onNumberSelected(3)
-                    onDismiss()
-                }
-            )
-
-            DropdownMenuItem(
-                text = {
-                    Text(text = "2")
-                },
-                onClick = {
-                    onNumberSelected(2)
-                    onDismiss()
-                }
-            )
-
-            DropdownMenuItem(
-                text = {
-                    Text(text = "1")
-                },
-                onClick = {
-                    onNumberSelected(1)
-                    onDismiss()
-                }
-            )
-        }
-    }
-}
 
 @Composable
 fun CameraControls(

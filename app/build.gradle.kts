@@ -6,7 +6,7 @@ plugins {
 android {
     signingConfigs {
         getByName("debug") {
-            storeFile = file("G:\\Projects\\kotlin\\android\\signer.jks")
+            storeFile = file("D:\\ComposeProjects\\signer.jks")
             storePassword = "123456"
             keyAlias = "key0"
             keyPassword = "123456"
