@@ -22,6 +22,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -38,7 +39,6 @@ class CameraViewModel(
     val sendResultList = mutableStateListOf<String>()
 
     var imageUri = mutableStateOf<Uri?>(null)
-    var pos = mutableStateOf(0)
 
     lateinit var rootImgPath: String
     lateinit var rootMbdPath: String
@@ -79,33 +79,39 @@ class CameraViewModel(
     }
 
     suspend fun send() {
-        /*
-        val res = mbrushRepository.upload(
-            "$rootMbdPath/${pos.value}.mbd",
-            pos.value,
-        ).status
+        sendResultList.clear()
 
-         */
-        delay(500)
+        withContext(Dispatchers.IO) {
+            (0 until recognizedNumberList.size).forEach { index ->
+                async {
+                    val res = mbrushRepository.upload(
+                        "$rootMbdPath/${index}.mbd",
+                        index,
+                    ).status
 
-        sendResultList.apply {
-            clear()
-            add("发送状态: ok")
+                    sendResultList.add("发送状态: $res")
+                }.await()
+            }
         }
-        pos.value += 1
+
     }
 
     suspend fun removeUpload(context: Context) {
-        val res = "ok"//mbrushRepository.removeUpload().status
+        viewModelScope.launch {
+            sendResultList.clear()
+
+            val res = withContext(Dispatchers.IO) {
+                async {
+                    mbrushRepository.removeUpload().status
+                }.await()
+            }
+
+            sendResultList.add("清空状态: $res")
+        }
 
         // reset
         context.deleteAllMbdFile(rootMbdPath)
-        pos.value = 0
-        sendResultList.apply {
-            clear()
-            add("清空状态: $res")
-        }
-
+        context.deleteTmpRgbFile(rootTmpPath)
         recognizedNumberList.clear()
     }
 
@@ -148,25 +154,20 @@ class CameraViewModel(
                 context,
                 imageFieUri
             ) {
-                runBlocking {
+
+                viewModelScope.launch {
                     recognizedNumberList.forEachIndexed { index, recognizedNumberStr ->
-                        // transform numbers to mbd files
-                        viewModelScope.launch {
+                        async {
                             transformTicketNumberStrToMbdFile(
                                 recognizedNumberStr,
                                 context,
                                 index.toString()
                             )
-                        }
-
+                        }.await()
                     }
+
+                    send()
                 }
-
-
-
-
-                // send mbd files
-                //runBlocking { send() }
             }
         }
     }

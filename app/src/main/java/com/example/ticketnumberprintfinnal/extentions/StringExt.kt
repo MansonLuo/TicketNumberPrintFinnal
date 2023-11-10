@@ -25,7 +25,7 @@ fun String.selectNumberText(): String {
 
 fun String.saveGeneratedWhiteJpgTo(rootPath: String, uniqueId: String): String {
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    paint.textSize = 80f
+    paint.textSize = 50f
     paint.color = Color.BLACK
     paint.textAlign = Paint.Align.LEFT
     val basaLine = -paint.ascent()

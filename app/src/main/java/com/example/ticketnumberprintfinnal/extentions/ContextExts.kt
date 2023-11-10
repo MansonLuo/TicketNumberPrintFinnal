@@ -21,8 +21,16 @@ class ContextExts {
             return magick!!
         }
 
-        fun Context.deleteTmpRgbFile(filePath: String) {
-            File(filePath).delete()
+        fun Context.deleteTmpRgbFile(path: String) {
+            val rootPath = File(path)
+
+            try {
+                rootPath.listFiles()?.forEach {
+                    it.delete()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
         fun Context.deleteAllMbdFile(rootPath: String) {
