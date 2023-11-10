@@ -23,7 +23,7 @@ fun String.selectNumberText(): String {
     }.first()
 }
 
-fun String.saveGeneratedWhiteJpgTo(rootPath: String): String {
+fun String.saveGeneratedWhiteJpgTo(rootPath: String, uniqueId: String): String {
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     paint.textSize = 80f
     paint.color = Color.BLACK
@@ -36,7 +36,7 @@ fun String.saveGeneratedWhiteJpgTo(rootPath: String): String {
     canvas.drawColor(Color.WHITE)
     canvas.drawText(this, 0f, basaLine, paint)
 
-    val filePath = rootPath + File.separator + "${getRandomFileName()}.jpg"
+    val filePath = rootPath + File.separator + "${getRandomFileName()}${uniqueId}.jpg"
 
     try {
         val quality = 100
@@ -50,7 +50,11 @@ fun String.saveGeneratedWhiteJpgTo(rootPath: String): String {
     return filePath
 }
 
-fun String.transformAndSaveToTmpRgb(context: Context, rootPath: String) {
+fun String.transformAndSaveToTmpRgb(
+    context: Context,
+    rootPath: String,
+    nameOfTmpRgb: String
+) {
     // generate tmp.rgb file
     context.getMagick().use {
         val wand = MagickWand()
@@ -67,7 +71,7 @@ fun String.transformAndSaveToTmpRgb(context: Context, rootPath: String) {
         pixel.color = "transparent"
         wand.rotateImage(pixel, 90.00)
 
-        wand.writeImage(rootPath + File.separator + "tmp.rgb")
+        wand.writeImage(rootPath + File.separator + "tmp${nameOfTmpRgb}.rgb")
     }
 
 }

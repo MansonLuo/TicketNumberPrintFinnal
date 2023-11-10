@@ -288,18 +288,7 @@ private fun CameraPreviewView(
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            /*
-            viewModel.recognizedNumber.value?.let { number ->
-                Text(
-                    text = number,
-                    color = Color.White
-                )
-            }
-             */
-            Text(
-                text = viewModel.cropBoxHeight.toString(),
-                color = Color.White
-            )
+
             if (viewModel.recognizedNumberList.isNotEmpty()) {
                 Column {
                     viewModel.recognizedNumberList.forEach {
@@ -310,11 +299,13 @@ private fun CameraPreviewView(
                     }
                 }
             }
-            viewModel.sendResult.value?.let { state ->
-                Text(
-                    text = state,
-                    color = Color.White
-                )
+
+            if (viewModel.sendResultList.isNotEmpty()) {
+                Column {
+                    viewModel.sendResultList.forEach {
+                        Text(text = it, color = Color.White)
+                    }
+                }
             }
         }
 

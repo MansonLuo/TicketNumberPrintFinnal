@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteAllMbdFile
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteTmpRgbFile
@@ -20,35 +21,35 @@ import com.example.ticketnumberprintfinnal.extentions.transformAndSaveToTmpRgb
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
 class CameraViewModel(
     private val mbrushRepository: MbrushRepository
-): ViewModel() {
+) : ViewModel() {
     val recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
-    val recognizedNumber = mutableStateOf<String?>(null)
     val recognizedNumberList = mutableStateListOf<String>()
-    var currentNumberOfTickets = mutableStateOf<Int>(1)
 
-    val sendResult = mutableStateOf<String?>(null)
+    val sendResultList = mutableStateListOf<String>()
+
     var imageUri = mutableStateOf<Uri?>(null)
     var pos = mutableStateOf(0)
+
     lateinit var rootImgPath: String
     lateinit var rootMbdPath: String
     lateinit var rootTmpPath: String
     lateinit var tmpRgbFilePath: String
 
-    var expanded by mutableStateOf<Boolean>(false)
-        private set
-    var cropBoxHeight by mutableStateOf<Dp>(60.dp)
     fun recognizeTicketNumber(
         context: Context,
         uri: Uri,
         onSuccess: () -> Unit,
-    ){
+    ) {
         lateinit var image: InputImage
 
         try {
@@ -59,14 +60,9 @@ class CameraViewModel(
 
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
-                // suppose only got one line text
-                // otherwise will throw exception
-                val allLines = mutableListOf<String>()
-                val wantedLines = mutableListOf<String>()
 
                 for (block in visionText.textBlocks) {
                     for (line in block.lines) {
-                        //allLines.add(line.text)
                         val res = line.text.extractTicketNumber()
 
                         if (res.isNotEmpty()) {
@@ -75,33 +71,9 @@ class CameraViewModel(
                     }
                 }
 
-                /*
-                recognizedNumberList.clear()
-
-                if (allLines.isEmpty()) {
-                    recognizedNumberList.add("无法识别")
-                } else {
-                    if (allLines.size < currentNumberOfTickets.value) {
-                        wantedLines.apply {
-                            addAll(allLines)
-                        }
-                    } else {
-                        wantedLines.apply {
-                            addAll(
-                                allLines.subList(0, currentNumberOfTickets.value)
-                            )
-                        }
-                    }
-                    wantedLines.map {  recognizedTextLine ->
-                        recognizedNumberList.add(
-                            recognizedTextLine.extractTicketNumber()
-                        )
-                    }
-                }
-                 */
                 onSuccess()
             }
-            .addOnFailureListener {  e ->
+            .addOnFailureListener { e ->
                 e.printStackTrace()
             }
     }
@@ -116,60 +88,50 @@ class CameraViewModel(
          */
         delay(500)
 
-        sendResult.value = "发送状态: ok"
+        sendResultList.apply {
+            clear()
+            add("发送状态: ok")
+        }
         pos.value += 1
     }
 
     suspend fun removeUpload(context: Context) {
-        val res = mbrushRepository.removeUpload().status
+        val res = "ok"//mbrushRepository.removeUpload().status
 
         // reset
         context.deleteAllMbdFile(rootMbdPath)
         pos.value = 0
-        sendResult.value = "清空状态: $res"
-        recognizedNumber.value = ""
+        sendResultList.apply {
+            clear()
+            add("清空状态: $res")
+        }
+
+        recognizedNumberList.clear()
     }
 
     fun transformTicketNumberStrToMbdFile(
         ticketNumber: String,
         context: Context,
+        name: String
     ) {
-        ticketNumber.saveGeneratedWhiteJpgTo(rootImgPath).let { generatedImageFilePath ->
-            generatedImageFilePath.transformAndSaveToTmpRgb(context, rootTmpPath)
+        ticketNumber.saveGeneratedWhiteJpgTo(rootImgPath, name).let { generatedImageFilePath ->
+            generatedImageFilePath.transformAndSaveToTmpRgb(context, rootTmpPath, name)
 
             (context as MainActivity).generateMBDFile(
-                tmpRgbFilePath,
-                "$rootMbdPath/${pos.value}.mbd"
+                tmpRgbFilePath.replace("#", name),
+                "$rootMbdPath/${name}.mbd"
             )
 
-            context.deleteTmpRgbFile(tmpRgbFilePath)
             imageUri.value = Uri.fromFile(File(generatedImageFilePath))
         }
 
-    }
-
-    fun resetState() {
-        sendResult.value = null
     }
 
     fun loadRootPath(context: Context) {
         rootImgPath = context.getExternalFilesDir("genedImages")!!.absolutePath
         rootMbdPath = context.getExternalFilesDir("mbds")!!.absolutePath
         rootTmpPath = context.getExternalFilesDir("tmps")!!.absolutePath
-        tmpRgbFilePath = "$rootTmpPath/tmp.rgb"
-    }
-
-    fun expandDropMenu() {
-        expanded = true
-    }
-
-    fun dismissDropMenu() {
-        expanded = false
-    }
-
-    fun changeCropBoxHeight(number: Int) {
-        currentNumberOfTickets.value = number
-        cropBoxHeight = (number * 60).dp
+        tmpRgbFilePath = "$rootTmpPath/tmp#.rgb"
     }
 
     fun takePictureAndSendMbdFiles(
@@ -179,23 +141,32 @@ class CameraViewModel(
         // take picture
         imageCapture.takePicture(
             context,
-            onError = { e -> e.printStackTrace()},
+            onError = { e -> e.printStackTrace() },
         ) { imageFieUri ->
             // recognize ticket numbers
             recognizeTicketNumber(
                 context,
                 imageFieUri
             ) {
-                recognizedNumberList.forEachIndexed { index, recognizedNumberStr ->
-                    // transform numbers to mbd files
-                    transformTicketNumberStrToMbdFile(
-                        recognizedNumberStr,
-                        context
-                    )
+                runBlocking {
+                    recognizedNumberList.forEachIndexed { index, recognizedNumberStr ->
+                        // transform numbers to mbd files
+                        viewModelScope.launch {
+                            transformTicketNumberStrToMbdFile(
+                                recognizedNumberStr,
+                                context,
+                                index.toString()
+                            )
+                        }
 
-                    // send mbd files
-                    runBlocking { send() }
+                    }
                 }
+
+
+
+
+                // send mbd files
+                //runBlocking { send() }
             }
         }
     }
