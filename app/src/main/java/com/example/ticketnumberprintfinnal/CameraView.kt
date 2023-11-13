@@ -152,10 +152,12 @@ fun DrawCropScan(
     var isAnimated by remember { mutableStateOf(true) }
 
 
+    /*
     val lineYAnimation by animateFloatAsState(
         targetValue = if (isAnimated) 0f else lineBottomY,
         animationSpec = infiniteRepeatable(animation = TweenSpec(durationMillis = 1500)), label = ""
     )
+     */
 
     LaunchedEffect(true) {
         isAnimated = !isAnimated
@@ -177,7 +179,7 @@ fun DrawCropScan(
         }
 
 
-        drawRect(Color.Transparent.copy(alpha = 0.1f))
+        drawRect(Color.Transparent.copy(alpha = 0.4f))
 
 
         // 扫描框 高度、宽度
@@ -210,6 +212,7 @@ fun DrawCropScan(
             blendMode = BlendMode.Clear
         )
 
+        /*
         // 扫描线 可到达的最大位置
         lineBottomY = height - 5.dp.toPx()
 
@@ -224,6 +227,7 @@ fun DrawCropScan(
 
         // 画扫描线
         drawOval(color, rectLine.topLeft, rectLine.size)
+         */
 
         // 边框
         val lineWith = 3.dp.toPx()

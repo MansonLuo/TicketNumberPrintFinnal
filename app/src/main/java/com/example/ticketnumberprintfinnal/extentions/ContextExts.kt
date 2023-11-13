@@ -44,25 +44,5 @@ class ContextExts {
                 e.printStackTrace()
             }
         }
-        suspend fun Context.getCameraProvider(): ProcessCameraProvider =
-            suspendCoroutine { continuation ->
-                ProcessCameraProvider.getInstance(this).also { cameraProvider ->
-                    cameraProvider.addListener({
-                        continuation.resume(cameraProvider.get())
-                    }, ContextCompat.getMainExecutor(this))
-                }
-            }
-
-        fun Context.getImageOutputRootDirectory(): String {
-            var rootImageDirectory = ""
-
-            try {
-                rootImageDirectory = this.getExternalFilesDir("croppedImages")?.absolutePath!!
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
-            return rootImageDirectory
-        }
     }
 }

@@ -4,31 +4,19 @@ import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.RetrofitInstance
-import com.example.ticketnumberprintfinnal.components.CameraControls
+import com.example.ticketnumberprintfinnal.screens.camera.CameraScreen
 import com.example.ticketnumberprintfinnal.ui.theme.TicketNumberPrintFinnalTheme
 import com.example.ticketnumberprintfinnal.utils.AspectRatioCameraConfig
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -106,11 +94,12 @@ fun App() {
                         val recognizedNumbers =
                             async { viewModel.recognizeTicketNumberAsync(context, imageUri) }.await()
 
-                        viewModel.updateRecognizedText(
-                            recognizedNumbers.joinToString {
-                            "$it/n"
-                            }
-                        )
+                        if (recognizedNumbers.isEmpty())  {
+                            viewModel.updateRecognizedText("无法识别")
+                            viewModel.updateSendResult("未发送")
+
+                            return@launch
+                        }
 
                         viewModel.uploadNumbers(context, recognizedNumbers)
                     }
@@ -130,67 +119,29 @@ fun App() {
         }
     }
 
-    Box(
-        contentAlignment = Alignment.TopCenter,
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        CameraView(
-            preview = viewModel.preview,
-            imageCapture = viewModel.imageCapture,
-            enableTorchProvider = { viewModel.enableTorch.value },
-            modifier = Modifier
-                .fillMaxSize()
-        )
+    CameraScreen(
+        preview = viewModel.preview,
+        imageCapture = viewModel.imageCapture,
+        enableTouchProvider = { viewModel.enableTorch.value },
 
-        // 裁剪区域
-        DrawCropScan(
-            topLeftScaleProvider = { viewModel.cropTopLeftScale.value },
-            sizeScaleProvider = { viewModel.cropSizeScale.value }
-        )
+        bitmapREnabledProvider = { viewModel.bitmapREnabled },
+        bitmapRProvider = { viewModel.bitmapR },
 
-        // show cropped bitmap provided by taking picture
-        if (viewModel.bitmapREnabled.value) {
-            if (viewModel.bitmapR.value != null) {
-                ShowAfterCropImageToAnalysis(bitmapProvider = { viewModel.bitmapR.value!! })
+        topLeftScaleProvider = { viewModel.cropTopLeftScale.value },
+        sizeScaleProvider = { viewModel.cropSizeScale.value },
+        onCropBoxRequestExpand = { onRequestExpand ->
+            if (onRequestExpand) {
+                viewModel.expandCropBox()
+            } else {
+                viewModel.shrinkCropBox()
             }
-        }
+        },
 
-        // show send results
-        Text(
-            text = viewModel.sendResultList.joinToString { "$it\n" },
-            modifier = Modifier
-                .align(alignment = Alignment.TopEnd)
-                .padding(horizontal = 10.dp, vertical = 10.dp)
-                .heightIn(max = 150.dp)
-                .widthIn(min = 100.dp)
-                .background(Color.Transparent.copy(alpha = 0.6f)),
-            color = Color.Red,
-            textAlign = TextAlign.Right
-        )
+        recognizedTicketNumbersProvider = { viewModel.recognizedTicketNumbers },
+        sendResultListProvider = { viewModel.sendResultList },
 
-        // show recognized text
-        Text(
-            text = viewModel.scanText.value,
-            modifier = Modifier
-                .align(alignment = Alignment.BottomStart)
-                .padding(horizontal = 10.dp, vertical = 150.dp)
-                .heightIn(max = 150.dp)
-                .widthIn(min = 100.dp)
-                .background(Color.Transparent.copy(alpha = 0.6f)),
-            color = Color.Red,
-            textAlign = TextAlign.Left
-        )
-
-        // Bottom controls
-        Column(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            verticalArrangement = Arrangement.Bottom
-        ) {
-            CameraControls(cameraUIAction)
-        }
-
-    }
+        cameraUIAction = cameraUIAction
+    )
 }
 
 @Preview(showBackground = true)

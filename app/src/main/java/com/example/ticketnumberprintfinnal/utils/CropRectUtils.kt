@@ -1,5 +1,6 @@
 package com.example.ticketnumberprintfinnal.utils
 
+import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -13,6 +14,7 @@ object CropRectUtils {
         sizeScale: Size
     ): Rect {
 
+        Log.e("Main", "in crop")
         val height = surfaceHeight * sizeScale.height
         val with = surfaceWidth * sizeScale.width
         val topLeft = Offset(x = surfaceWidth * topLeftScale.x, y = surfaceHeight * topLeftScale.y)
@@ -28,6 +30,7 @@ object CropRectUtils {
         sizeScale: Size
     ): Rect {
 
+        Log.e("Main", "in Crop 90")
         val height = surfaceHeight * sizeScale.height
         val with = surfaceWidth * sizeScale.width
         val topLeft = Offset(x = surfaceWidth * topLeftScale.x, y = surfaceHeight * topLeftScale.y)

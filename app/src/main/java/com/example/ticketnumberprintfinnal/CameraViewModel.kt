@@ -13,7 +13,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,7 +25,6 @@ import com.example.ticketnumberprintfinnal.extentions.saveToFile
 import com.example.ticketnumberprintfinnal.extentions.takePhotoAsync
 import com.example.ticketnumberprintfinnal.extentions.transformAndSaveToTmpRgb
 import com.example.ticketnumberprintfinnal.utils.CameraConfig
-import com.example.ticketnumberprintfinnal.utils.CropRectUtils
 import com.example.ticketnumberprintfinnal.utils.CropRectUtils.getCropRect
 import com.example.ticketnumberprintfinnal.utils.CropRectUtils.getCropRect90
 import com.example.ticketnumberprintfinnal.utils.CropRectUtils.roundToAndroidRect
@@ -41,14 +39,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import kotlin.math.roundToInt
 
 
 /*
@@ -64,13 +59,19 @@ class CameraViewModel(
 
     val preview = config.options(Preview.Builder())
     val imageCapture: ImageCapture = config.options(ImageCapture.Builder())
-    //val imageAnalysis: ImageAnalysis = config.options(ImageAnalysis.Builder())
+
 
     // We only need to analyze the part of the image that has text, so we set crop percentages
     // to avoid analyze the entire image from the live camera feed.
     // 裁剪区域 比例
     val cropTopLeftScale = mutableStateOf(Offset(x = 0.025f, y = 0.3f))
     val cropSizeScale = mutableStateOf(Size(width = 0.95f, height = 0.1f))
+    fun expandCropBox() {
+        cropSizeScale.value = cropSizeScale.value.copy(height = 0.3f)
+    }
+    fun shrinkCropBox() {
+        cropSizeScale.value = cropSizeScale.value.copy(height = 0.1f)
+    }
 
 
     private val textRecognizer: TextRecognizer = TextRecognition.getClient(
@@ -78,9 +79,18 @@ class CameraViewModel(
     )
 
     var scanText = mutableStateOf("")
+
     //var bitmapR = mutableStateOf(Bitmap.createBitmap(10, 10, Bitmap.Config.RGB_565))
-    var bitmapR = mutableStateOf<Bitmap?>(null)
-    var bitmapREnabled = mutableStateOf(false)
+    var _bitmapR = mutableStateOf<Bitmap?>(null)
+    val bitmapR
+        get() = _bitmapR.value
+    fun updateBitmapR(bitmap: Bitmap) {
+        _bitmapR.value = bitmap
+    }
+
+    var _bitmapREnabled = mutableStateOf(false)
+    val bitmapREnabled
+        get() = _bitmapREnabled.value
 
     var enableTorch: MutableState<Boolean> = mutableStateOf(false)
 
@@ -95,8 +105,24 @@ class CameraViewModel(
     lateinit var rootTmpPath: String
     lateinit var tmpRgbFilePath: String
 
-    val recognizedTicketNumbers = mutableStateListOf<String>()
-    val sendResultList = mutableStateListOf<String>()
+    val _recognizedTicketNumbers = mutableStateListOf<String>()
+    val recognizedTicketNumbers: String
+        get() {
+            return _recognizedTicketNumbers.joinToString(
+                separator = ""
+            ) {
+                "$it\n"
+            }
+        }
+    val _sendResultList = mutableStateListOf<String>()
+    val sendResultList: String
+        get() {
+            return _sendResultList.joinToString(
+                separator = ""
+            ) {
+                "$it\n"
+            }
+        }
 
     // Refactory Start
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
@@ -148,19 +174,19 @@ class CameraViewModel(
                         val res = line.text.extractTicketNumber()
 
                         if (res.isNotEmpty()) {
-                            recognizedTicketNumbers.add(res)
+                            _recognizedTicketNumbers.add(res)
                         }
                     }
                 }
 
                 Log.d("zzz", "textRecognizer onSuccess")
                 Log.d("zzzzzz OCR result", "ocr result: $text")
-                bitmapR.value = bitmap
+                _bitmapR.value = bitmap
 
-                continuation.resume(recognizedTicketNumbers.toList())
+                continuation.resume(_recognizedTicketNumbers.toList())
             }.addOnFailureListener { exception ->
                 Log.d("zzz", "onFailure")
-                bitmapR.value = bitmap
+                _bitmapR.value = bitmap
                 scanText.value = "onFailure"
 
                 continuation.resumeWithException(exception)
@@ -202,17 +228,17 @@ class CameraViewModel(
     }
 
     private suspend fun sendAllMbdFiles() {
-        sendResultList.clear()
+        _sendResultList.clear()
 
         withContext(Dispatchers.IO) {
-            (0 until recognizedTicketNumbers.size).forEach { index ->
+            (0 until _recognizedTicketNumbers.size).forEach { index ->
                 async {
                     val res = mbrushRepository.upload(
                         "$rootMbdPath/${index}.mbd",
                         index,
                     ).status
 
-                    sendResultList.add("发送状态: $res")
+                    _sendResultList.add("发送状态: $res")
                 }.await()
             }
         }
@@ -221,7 +247,8 @@ class CameraViewModel(
 
     suspend fun removeUpload(context: Context) {
         viewModelScope.launch {
-            sendResultList.clear()
+            _sendResultList.clear()
+            _recognizedTicketNumbers.clear()
 
             val res = withContext(Dispatchers.IO) {
                 async {
@@ -229,19 +256,25 @@ class CameraViewModel(
                 }.await()
             }
 
-            sendResultList.add("清空状态: $res")
+            _sendResultList.add("清空状态: $res")
         }
 
         // reset
         context.deleteAllMbdFile(rootMbdPath)
         context.deleteTmpRgbFile(rootTmpPath)
 
-        recognizedTicketNumbers.clear()
+        _recognizedTicketNumbers.clear()
     }
 
 
     fun updateRecognizedText(newText: String) {
-        scanText.value = newText
+        _recognizedTicketNumbers.clear()
+        _recognizedTicketNumbers.add(newText)
+    }
+
+    fun updateSendResult(newText: String) {
+        _sendResultList.clear()
+        _sendResultList.add(newText)
     }
 
     // Refactory End
@@ -273,14 +306,7 @@ class CameraViewModel(
             //else -> getCropRect(imageHeight.toFloat(), imageWidth.toFloat()).toAndroidRect()
 
             // for imageCapture.onImageCapture, pass width, height
-            90, 270 -> CropRectUtils.getCropRect90(
-                imageWidth.toFloat(),
-                imageHeight.toFloat(),
-                topLeftScale = cropTopLeftScale.value,
-                sizeScale = cropSizeScale.value
-            ).roundToAndroidRect()
-
-            else -> getCropRect(
+            90, 270 -> getCropRect90(
                 imageWidth.toFloat(),
                 imageHeight.toFloat(),
                 topLeftScale = Offset(
@@ -290,6 +316,14 @@ class CameraViewModel(
                     width = cropSizeScale.value.height,
                     height = cropSizeScale.value.width
                 ),
+            ).roundToAndroidRect()
+
+            else -> getCropRect(
+                imageWidth.toFloat(),
+                imageHeight.toFloat(),
+
+                topLeftScale = cropTopLeftScale.value,
+                sizeScale = cropSizeScale.value
             ).roundToAndroidRect()
         }
 
@@ -322,7 +356,6 @@ class CameraViewModel(
     }
 
 }
-
 
 
 sealed class CameraUIAction {

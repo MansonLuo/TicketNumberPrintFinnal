@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.util.Log
+import androidx.core.text.trimmedLength
 import com.cherryleafroad.kmagick.FilterType
 import com.cherryleafroad.kmagick.MagickWand
 import com.cherryleafroad.kmagick.PixelWand
@@ -14,14 +16,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
-
-fun String.selectNumberText(): String {
-    return this.split(" ").map {
-        it.trim()
-    }.filter {
-        it.isDigitsOnly()
-    }.first()
-}
 
 fun String.saveGeneratedWhiteJpgTo(rootPath: String, uniqueId: String): String {
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -91,10 +85,24 @@ fun String.extractTicketNumber(): String {
  */
 
 fun String.extractTicketNumber(): String {
-    val pattern = "\\d{9,15}"
-    val regex = Regex(pattern)
+    // extract numbers without blanck surrounded
+    var pattern = "\\d{9,15}"
+    var regex = Regex(pattern)
 
-    val res: String = regex.find(this)?.value ?: ""
+    var res: String = regex.find(this)?.value ?: ""
 
-    return res
+    if (res.isNotEmpty()) return res
+
+    // extract numbers with blanks surrounded
+    // 5555 5555 5555
+    res = this.replace(" ", "")
+    pattern = "\\d{12}"
+    regex = Regex(pattern)
+    res = regex.find(res)?.value ?: ""
+
+    if (res.isNotEmpty()) {
+        return res
+    }
+
+    return ""
 }

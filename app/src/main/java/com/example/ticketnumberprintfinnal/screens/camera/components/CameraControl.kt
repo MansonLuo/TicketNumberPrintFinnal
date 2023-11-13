@@ -1,4 +1,4 @@
-package com.example.ticketnumberprintfinnal.components
+package com.example.ticketnumberprintfinnal.screens.camera.components
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
