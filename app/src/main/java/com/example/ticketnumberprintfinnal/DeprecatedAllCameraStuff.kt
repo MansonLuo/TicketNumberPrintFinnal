@@ -1,14 +1,12 @@
 package com.example.ticketnumberprintfinnal
 
 import android.net.Uri
-import android.util.Log
 import android.util.Rational
 import android.view.OrientationEventListener
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout.LayoutParams
-import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -18,7 +16,6 @@ import androidx.camera.core.ViewPort
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,20 +23,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.More
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.sharp.Cancel
 import androidx.compose.material.icons.sharp.ClearAll
 import androidx.compose.material.icons.sharp.Lens
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -49,38 +40,32 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.RetrofitInstance
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.getCameraProvider
-import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
-import com.example.ticketnumberprintfinnal.extentions.takePicture
 import com.example.ticketnumberprintfinnal.extentions.toPx
 import kotlinx.coroutines.launch
 
 @Composable
-fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) -> Unit) {
+fun DeprecatedCameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val mbrushRepository = remember {
         MbrushRepository(RetrofitInstance.mBrushService)
     }
     val viewmodel = remember {
-        val vm = CameraViewModel(mbrushRepository)
-        vm.loadRootPath(context = context)
+        val vm = DeprecatedCameraViewModel(mbrushRepository)
+        vm.deprecatedLoadRootPath(context = context)
 
         vm
     }
@@ -180,7 +165,7 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
          */
 
         when (cameraUIAction) {
-            is CameraUIAction.OnCameraClick -> {
+            is DeprecatedCameraUIAction.OnCameraClick -> {
                 /*
                 scope.launch {
                     imageCapture.takePicture(
@@ -191,19 +176,19 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
                     )
                 }
                 */
-                viewmodel.takePictureAndSendMbdFiles(
+                viewmodel.deprectaedTakePictureAndSendMbdFiles(
                     context,
                     imageCapture
                 )
             }
 
-            is CameraUIAction.OnCancelCameraClick -> {
+            is DeprecatedCameraUIAction.OnCancelCameraClick -> {
                 (context as MainActivity).finish()
             }
 
-            is CameraUIAction.OnClearAllPrintsClick -> {
+            is DeprecatedCameraUIAction.OnClearAllPrintsClick -> {
                 scope.launch {
-                    viewmodel.removeUpload(context)
+                    viewmodel.deprecatedRemoveUpload(context)
                 }
             }
         }
@@ -214,8 +199,8 @@ fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) 
 private fun CameraPreviewView(
     imageCapture: ImageCapture,
     rotation: Int,
-    viewModel: CameraViewModel,
-    cameraUIAction: (CameraUIAction) -> Unit
+    viewModel: DeprecatedCameraViewModel,
+    cameraUIAction: (DeprecatedCameraUIAction) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -327,15 +312,15 @@ private fun CameraPreviewView(
             modifier = Modifier.align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.Bottom
         ) {
-            CameraControls(cameraUIAction)
+            DeprecatedCameraControls(cameraUIAction)
         }
     }
 }
 
 
 @Composable
-fun CameraControls(
-    cameraUIAction: (CameraUIAction) -> Unit
+fun DeprecatedCameraControls(
+    cameraUIAction: (DeprecatedCameraUIAction) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -345,7 +330,7 @@ fun CameraControls(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CameraControl(
+        DeprecatedCameraControl(
             Icons.Sharp.Cancel,
             R.string.icn_camera_view_cancel_camera_description,
             modifier = Modifier
@@ -353,10 +338,10 @@ fun CameraControls(
                 .padding(1.dp)
                 .border(1.dp, Color.White, CircleShape),
             onClick = {
-                cameraUIAction(CameraUIAction.OnCancelCameraClick)
+                cameraUIAction(DeprecatedCameraUIAction.OnCancelCameraClick)
             }
         )
-        CameraControl(
+        DeprecatedCameraControl(
             Icons.Sharp.Lens,
             R.string.icn_camera_view_camera_shutter_content_description,
             modifier = Modifier
@@ -364,10 +349,10 @@ fun CameraControls(
                 .padding(1.dp)
                 .border(1.dp, Color.White, CircleShape),
             onClick = {
-                cameraUIAction(CameraUIAction.OnCameraClick)
+                cameraUIAction(DeprecatedCameraUIAction.OnCameraClick)
             }
         )
-        CameraControl(
+        DeprecatedCameraControl(
             Icons.Sharp.ClearAll,
             R.string.icn_clear_all_prints_description,
             modifier = Modifier
@@ -375,14 +360,14 @@ fun CameraControls(
                 .padding(1.dp)
                 .border(1.dp, Color.White, CircleShape),
             onClick = {
-                cameraUIAction(CameraUIAction.OnClearAllPrintsClick)
+                cameraUIAction(DeprecatedCameraUIAction.OnClearAllPrintsClick)
             }
         )
     }
 }
 
 @Composable
-fun CameraControl(
+fun DeprecatedCameraControl(
     imageVector: ImageVector,
     contentDescId: Int,
     modifier: Modifier = Modifier,
@@ -401,8 +386,8 @@ fun CameraControl(
     }
 }
 
-sealed class CameraUIAction {
-    object OnCameraClick : CameraUIAction()
-    object OnCancelCameraClick : CameraUIAction()
-    object OnClearAllPrintsClick : CameraUIAction()
+sealed class DeprecatedCameraUIAction {
+    object OnCameraClick : DeprecatedCameraUIAction()
+    object OnCancelCameraClick : DeprecatedCameraUIAction()
+    object OnClearAllPrintsClick : DeprecatedCameraUIAction()
 }

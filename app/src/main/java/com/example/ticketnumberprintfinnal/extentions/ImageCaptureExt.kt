@@ -8,12 +8,17 @@ import android.webkit.MimeTypeMap
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.core.net.toFile
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.getImageOutputRootDirectory
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 private const val FILENAME = "yyyy-MM-dd-HH-mm-ss-SSS"
 private const val PHOTO_EXTENSION = ".jpg"
@@ -77,4 +82,22 @@ fun getOutputFileOptions(
         .build()
 
     return outputOptions
+}
+
+suspend fun ImageCapture.takePhotoAsync(
+    executor: Executor = Executors.newSingleThreadExecutor()
+): ImageProxy = suspendCoroutine {  continuation ->
+
+    this.takePicture(
+        executor,
+        object : ImageCapture.OnImageCapturedCallback() {
+            override fun onCaptureSuccess(image: ImageProxy) {
+                continuation.resume(image)
+            }
+
+            override fun onError(exception: ImageCaptureException) {
+                continuation.resumeWithException(exception)
+            }
+        }
+    )
 }
