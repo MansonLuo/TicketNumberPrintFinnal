@@ -1,27 +1,35 @@
 package com.example.ticketnumberprintfinnal
 
 import android.Manifest
+import android.media.MediaActionSound
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.RetrofitInstance
+import com.example.ticketnumberprintfinnal.api.WorkingStatu
 import com.example.ticketnumberprintfinnal.screens.camera.CameraScreen
 import com.example.ticketnumberprintfinnal.ui.theme.TicketNumberPrintFinnalTheme
 import com.example.ticketnumberprintfinnal.utils.AspectRatioCameraConfig
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -83,16 +91,13 @@ fun App() {
         when (cameraUIAction) {
             is CameraUIAction.OnCameraClick -> {
 
-                scope.launch {
-                    val imageUri = async {
-                        viewModel.takePictureAsync(
-                            outputDirectory = viewModel.getOutputDirectory(context)
-                        )
-                    }.await()
+                val job = scope.launch {
+                    val imageUri = viewModel.takePictureAsync(
+                        outputDirectory = viewModel.getOutputDirectory(context)
+                    )
 
                     if (imageUri != null) {
-                        val recognizedNumbers =
-                            async { viewModel.recognizeTicketNumberAsync(context, imageUri) }.await()
+                        val recognizedNumbers = viewModel.recognizeTicketNumberAsync(context, imageUri)
 
                         if (recognizedNumbers.isEmpty())  {
                             viewModel.updateRecognizedText("无法识别")
@@ -103,6 +108,12 @@ fun App() {
 
                         viewModel.uploadNumbers(context, recognizedNumbers)
                     }
+                }
+
+                job.invokeOnCompletion {
+                    MediaActionSound().play(MediaActionSound.STOP_VIDEO_RECORDING)
+
+                    viewModel.startAutoPrint()
                 }
 
             }

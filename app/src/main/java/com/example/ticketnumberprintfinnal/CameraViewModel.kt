@@ -17,6 +17,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
+import com.example.ticketnumberprintfinnal.api.WorkingStatu
+import com.example.ticketnumberprintfinnal.api.models.PrinterStatu
+import com.example.ticketnumberprintfinnal.api.models.Status
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteAllMbdFile
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteTmpRgbFile
 import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
@@ -35,6 +38,7 @@ import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,6 +73,7 @@ class CameraViewModel(
     fun expandCropBox() {
         cropSizeScale.value = cropSizeScale.value.copy(height = 0.3f)
     }
+
     fun shrinkCropBox() {
         cropSizeScale.value = cropSizeScale.value.copy(height = 0.1f)
     }
@@ -84,6 +89,7 @@ class CameraViewModel(
     var _bitmapR = mutableStateOf<Bitmap?>(null)
     val bitmapR
         get() = _bitmapR.value
+
     fun updateBitmapR(bitmap: Bitmap) {
         _bitmapR.value = bitmap
     }
@@ -114,6 +120,9 @@ class CameraViewModel(
                 "$it\n"
             }
         }
+    val countOfRecognizedNumbers
+        get() = _recognizedTicketNumbers.size
+
     val _sendResultList = mutableStateListOf<String>()
     val sendResultList: String
         get() {
@@ -124,35 +133,50 @@ class CameraViewModel(
             }
         }
 
+    val _autoPrintEnabled = mutableStateOf(false)
+    val autoPrintEnabled
+        get() = _autoPrintEnabled.value
+    fun startAutoPrint() {
+        _autoPrintEnabled.value = true
+    }
+    fun stopAutoPrint() {
+        _autoPrintEnabled.value = false
+    }
+
     // Refactory Start
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
     suspend fun takePictureAsync(
         filenameFormat: String = "yyyy-MM-dd-HH-mm-ss-SSS",
         outputDirectory: File,
     ): Uri? {
-        val imageProxy = imageCapture.takePhotoAsync()
-        val photoFile = File(
-            outputDirectory,
-            SimpleDateFormat(filenameFormat, Locale.US).format(System.currentTimeMillis()) + ".jpg"
-        )
-
-        if (imageProxy.image == null) {
-            imageProxy.close()
-
-            return null
-        }
-
-        val bitmap = cropTextImage(imageProxy) ?: return null
-
-        withContext(Dispatchers.IO) {
+        return coroutineScope {
             async {
-                bitmap.saveToFile(photoFile)
-            }
+                val imageProxy = imageCapture.takePhotoAsync()
+                val photoFile = File(
+                    outputDirectory,
+                    SimpleDateFormat(
+                        filenameFormat,
+                        Locale.US
+                    ).format(System.currentTimeMillis()) + ".jpg"
+                )
+
+                if (imageProxy.image == null) {
+                    imageProxy.close()
+
+                    return@async null
+                }
+
+                val bitmap = cropTextImage(imageProxy) ?: return@async null
+
+                withContext(Dispatchers.IO) {
+                    bitmap.saveToFile(photoFile)
+                }
+
+                imageProxy.close()
+
+                Uri.fromFile(photoFile)
+            }.await()
         }
-
-        imageProxy.close()
-
-        return Uri.fromFile(photoFile)
     }
 
     suspend fun recognizeTicketNumberAsync(
@@ -173,7 +197,7 @@ class CameraViewModel(
                     for (line in block.lines) {
                         val res = line.text.extractTicketNumber()
 
-                        if (res.isNotEmpty()) {
+                        if (res.isNotBlank()) {
                             _recognizedTicketNumbers.add(res)
                         }
                     }
@@ -195,19 +219,24 @@ class CameraViewModel(
 
     suspend fun uploadNumbers(
         context: Context,
-        numbers: List<String>
+        numbers: List<String>,
     ) {
         coroutineScope {
-            numbers.forEachIndexed { index, numberStr ->
-                async {
-                    transformTicketNumberStrToMbdFile(
-                        numberStr,
-                        context,
-                        index.toString()
-                    )
-                }.await()
-            }
 
+            // this async can't refactor, cause cannot access variables in Dispatchers.IO
+            async {
+                withContext(Dispatchers.IO) {
+                    numbers.forEachIndexed { index, numberStr ->
+                        transformTicketNumberStrToMbdFile(
+                            numberStr,
+                            context,
+                            index.toString()
+                        )
+                    }
+                }
+            }.await()
+
+            // create multiple coroutine, each one will send mbdfile at once
             sendAllMbdFiles()
         }
     }
@@ -227,28 +256,37 @@ class CameraViewModel(
         }
     }
 
+    /*
+     * Printer server can receive multiple requests at once
+     *
+     * So sendAllMbdFiles() send all at once instead of one by one
+     */
     private suspend fun sendAllMbdFiles() {
         _sendResultList.clear()
 
-        withContext(Dispatchers.IO) {
-            (0 until _recognizedTicketNumbers.size).forEach { index ->
+        coroutineScope {
+            val deffered = (0 until _recognizedTicketNumbers.size).map { index ->
                 async {
-                    val res = mbrushRepository.upload(
-                        "$rootMbdPath/${index}.mbd",
-                        index,
-                    ).status
+                    withContext(Dispatchers.IO) {
+                        val res = mbrushRepository.upload(
+                            "$rootMbdPath/${index}.mbd",
+                            index,
+                        ).status
 
-                    _sendResultList.add("发送状态: $res")
-                }.await()
+                        _sendResultList.add("发送状态: $res")
+                    }
+                }
             }
-        }
 
+            deffered.awaitAll()
+        }
     }
 
     suspend fun removeUpload(context: Context) {
         viewModelScope.launch {
             _sendResultList.clear()
             _recognizedTicketNumbers.clear()
+            stopAutoPrint()
 
             val res = withContext(Dispatchers.IO) {
                 async {
@@ -275,6 +313,28 @@ class CameraViewModel(
     fun updateSendResult(newText: String) {
         _sendResultList.clear()
         _sendResultList.add(newText)
+    }
+
+    suspend fun simulateShortPress(): Status {
+        return coroutineScope {
+            async {
+                withContext(Dispatchers.IO) {
+                    val status = mbrushRepository.simulateShortPress()
+
+                    status
+                }
+            }.await()
+        }
+    }
+
+    suspend fun getPrinterStatu(): WorkingStatu {
+        return coroutineScope {
+            async {
+                withContext(Dispatchers.IO) {
+                    mbrushRepository.getPrinterStatu()
+                }
+            }.await()
+        }
     }
 
     // Refactory End

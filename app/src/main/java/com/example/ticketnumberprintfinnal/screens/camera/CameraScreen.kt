@@ -81,7 +81,7 @@ fun CameraScreen(
             modifier = Modifier
                 .align(alignment = Alignment.TopStart)
                 .padding(horizontal = 10.dp, vertical = 10.dp)
-                .heightIn(max = 150.dp)
+                .heightIn(max = 300.dp)
                 .widthIn(min = 100.dp)
                 .background(Color.Transparent.copy(alpha = 0.6f)),
             color = Color.Red,
@@ -94,7 +94,7 @@ fun CameraScreen(
             modifier = Modifier
                 .align(alignment = Alignment.TopEnd)
                 .padding(horizontal = 10.dp, vertical = 10.dp)
-                .heightIn(max = 150.dp)
+                .heightIn(max = 300.dp)
                 .widthIn(min = 100.dp)
                 .background(Color.Transparent.copy(alpha = 0.6f)),
             color = Color.Red,

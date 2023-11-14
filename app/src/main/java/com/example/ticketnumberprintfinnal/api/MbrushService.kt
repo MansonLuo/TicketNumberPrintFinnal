@@ -1,5 +1,6 @@
 package com.example.ticketnumberprintfinnal.api
 
+import com.example.ticketnumberprintfinnal.api.models.PrinterStatu
 import com.example.ticketnumberprintfinnal.api.models.Status
 import okhttp3.MultipartBody
 import retrofit2.http.GET
@@ -16,4 +17,10 @@ interface MBrushService {
     suspend fun upload(
         @Part file: MultipartBody.Part
     ): Status
+
+    @GET("cgi-bin/cmd?cmd=simulate&key=1")
+    suspend fun simulateShortPress(): Status
+
+    @GET("cgi-bin/cmd?cmd=get_info")
+    suspend fun getPrinterStatu(): PrinterStatu
 }
