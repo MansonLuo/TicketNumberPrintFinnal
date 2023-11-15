@@ -56,7 +56,6 @@ fun CameraView(
     imageCapture: ImageCapture? = null,
     cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
     scaleType: PreviewView.ScaleType = PreviewView.ScaleType.FILL_CENTER,
-    enableTorchProvider: () -> Boolean = { false },
     focusOnTap: Boolean = true
 ) {
 
@@ -90,6 +89,7 @@ fun CameraView(
     }
 
 
+    /*
     LaunchedEffect(camera, enableTorchProvider()) {
         camera?.let {
             if (it.cameraInfo.hasFlashUnit()) {
@@ -97,6 +97,7 @@ fun CameraView(
             }
         }
     }
+     */
 
     DisposableEffect(Unit) {
         onDispose {

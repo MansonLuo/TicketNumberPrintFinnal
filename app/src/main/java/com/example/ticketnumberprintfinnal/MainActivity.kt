@@ -3,33 +3,24 @@ package com.example.ticketnumberprintfinnal
 import android.Manifest
 import android.media.MediaActionSound
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.RetrofitInstance
-import com.example.ticketnumberprintfinnal.api.WorkingStatu
 import com.example.ticketnumberprintfinnal.screens.camera.CameraScreen
 import com.example.ticketnumberprintfinnal.ui.theme.TicketNumberPrintFinnalTheme
 import com.example.ticketnumberprintfinnal.utils.AspectRatioCameraConfig
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -72,7 +63,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun App() {
 
@@ -112,8 +102,6 @@ fun App() {
 
                 job.invokeOnCompletion {
                     MediaActionSound().play(MediaActionSound.STOP_VIDEO_RECORDING)
-
-                    viewModel.startAutoPrint()
                 }
 
             }
@@ -133,10 +121,6 @@ fun App() {
     CameraScreen(
         preview = viewModel.preview,
         imageCapture = viewModel.imageCapture,
-        enableTouchProvider = { viewModel.enableTorch.value },
-
-        bitmapREnabledProvider = { viewModel.bitmapREnabled },
-        bitmapRProvider = { viewModel.bitmapR },
 
         topLeftScaleProvider = { viewModel.cropTopLeftScale.value },
         sizeScaleProvider = { viewModel.cropSizeScale.value },

@@ -1,6 +1,5 @@
 package com.example.ticketnumberprintfinnal.screens.camera
 
-import android.graphics.Bitmap
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.compose.foundation.background
@@ -26,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import com.example.ticketnumberprintfinnal.CameraUIAction
 import com.example.ticketnumberprintfinnal.CameraView
 import com.example.ticketnumberprintfinnal.DrawCropScan
-import com.example.ticketnumberprintfinnal.ShowAfterCropImageToAnalysis
 import com.example.ticketnumberprintfinnal.screens.camera.components.CameraControls
 import com.example.ticketnumberprintfinnal.screens.camera.components.CropBoxResizer
 
@@ -34,9 +32,6 @@ import com.example.ticketnumberprintfinnal.screens.camera.components.CropBoxResi
 fun CameraScreen(
     preview: Preview,
     imageCapture: ImageCapture,
-    enableTouchProvider: () -> Boolean,
-    bitmapREnabledProvider: () -> Boolean,
-    bitmapRProvider: () -> Bitmap?,
 
     topLeftScaleProvider: () -> Offset,
     sizeScaleProvider: () -> Size,
@@ -55,7 +50,6 @@ fun CameraScreen(
         CameraView(
             preview = preview,
             imageCapture = imageCapture,
-            enableTorchProvider = enableTouchProvider,
             modifier = Modifier
                 .fillMaxSize()
         )
@@ -65,15 +59,6 @@ fun CameraScreen(
             topLeftScaleProvider = topLeftScaleProvider,
             sizeScaleProvider = sizeScaleProvider
         )
-
-        // show cropped bitmap provided by taking picture
-        if (bitmapREnabledProvider()) {
-            val bitmap = bitmapRProvider()
-            if (bitmap != null) {
-                ShowAfterCropImageToAnalysis(bitmapProvider = { bitmap })
-            }
-        }
-
 
         // show recognized text
         Text(

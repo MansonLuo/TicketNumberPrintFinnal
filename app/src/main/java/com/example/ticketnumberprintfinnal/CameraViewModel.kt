@@ -18,7 +18,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.WorkingStatu
-import com.example.ticketnumberprintfinnal.api.models.PrinterStatu
 import com.example.ticketnumberprintfinnal.api.models.Status
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteAllMbdFile
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteTmpRgbFile
@@ -83,28 +82,6 @@ class CameraViewModel(
         ChineseTextRecognizerOptions.Builder().build()
     )
 
-    var scanText = mutableStateOf("")
-
-    //var bitmapR = mutableStateOf(Bitmap.createBitmap(10, 10, Bitmap.Config.RGB_565))
-    var _bitmapR = mutableStateOf<Bitmap?>(null)
-    val bitmapR
-        get() = _bitmapR.value
-
-    fun updateBitmapR(bitmap: Bitmap) {
-        _bitmapR.value = bitmap
-    }
-
-    var _bitmapREnabled = mutableStateOf(false)
-    val bitmapREnabled
-        get() = _bitmapREnabled.value
-
-    var enableTorch: MutableState<Boolean> = mutableStateOf(false)
-
-    fun toggleTorch() {
-        enableTorch.value = !enableTorch.value
-    }
-
-
     // storage
     lateinit var rootImgPath: String
     lateinit var rootMbdPath: String
@@ -120,8 +97,6 @@ class CameraViewModel(
                 "$it\n"
             }
         }
-    val countOfRecognizedNumbers
-        get() = _recognizedTicketNumbers.size
 
     val _sendResultList = mutableStateListOf<String>()
     val sendResultList: String
@@ -133,19 +108,9 @@ class CameraViewModel(
             }
         }
 
-    val _autoPrintEnabled = mutableStateOf(false)
-    val autoPrintEnabled
-        get() = _autoPrintEnabled.value
-    fun startAutoPrint() {
-        _autoPrintEnabled.value = true
-    }
-    fun stopAutoPrint() {
-        _autoPrintEnabled.value = false
-    }
-
     // Refactory Start
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
-    suspend fun takePictureAsync(
+    suspend fun  takePictureAsync(
         filenameFormat: String = "yyyy-MM-dd-HH-mm-ss-SSS",
         outputDirectory: File,
     ): Uri? {
@@ -205,13 +170,10 @@ class CameraViewModel(
 
                 Log.d("zzz", "textRecognizer onSuccess")
                 Log.d("zzzzzz OCR result", "ocr result: $text")
-                _bitmapR.value = bitmap
 
                 continuation.resume(_recognizedTicketNumbers.toList())
             }.addOnFailureListener { exception ->
                 Log.d("zzz", "onFailure")
-                _bitmapR.value = bitmap
-                scanText.value = "onFailure"
 
                 continuation.resumeWithException(exception)
             }
@@ -286,7 +248,6 @@ class CameraViewModel(
         viewModelScope.launch {
             _sendResultList.clear()
             _recognizedTicketNumbers.clear()
-            stopAutoPrint()
 
             val res = withContext(Dispatchers.IO) {
                 async {

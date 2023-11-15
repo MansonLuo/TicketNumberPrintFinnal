@@ -8,7 +8,6 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
-import org.jetbrains.annotations.NotNull
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.max
@@ -59,7 +58,6 @@ class ResolutionCameraConfig(context: Context) : CameraConfig() {
         return super.options(builder)
     }
 
-    @NotNull
     override fun options(builder: ImageCapture.Builder): ImageCapture {
         builder.setTargetResolution(mTargetSize)
         return builder.build()
