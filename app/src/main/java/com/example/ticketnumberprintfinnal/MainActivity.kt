@@ -97,8 +97,6 @@ fun App() {
                             return@launch
                         }
 
-                        // TODO: Refactor this method to launch several coroutines,
-                        //  each coroutine is dedicated to genarate one mbd file and send it to server
                         viewModel.uploadNumbers(context, recognizedNumbers)
                     }
 

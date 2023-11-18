@@ -3,7 +3,11 @@ package com.example.ticketnumberprintfinnal
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ImageDecoder
+import android.graphics.Paint
+import android.media.MediaActionSound
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -24,6 +28,7 @@ import com.example.ticketnumberprintfinnal.api.models.Status
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteAllMbdFile
 import com.example.ticketnumberprintfinnal.extentions.ContextExts.Companion.deleteTmpRgbFile
 import com.example.ticketnumberprintfinnal.extentions.extractTicketNumber
+import com.example.ticketnumberprintfinnal.extentions.getRandomFileName
 import com.example.ticketnumberprintfinnal.extentions.saveGeneratedWhiteJpgTo
 import com.example.ticketnumberprintfinnal.extentions.saveToFile
 import com.example.ticketnumberprintfinnal.extentions.takePhotoAsync
@@ -38,12 +43,14 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.coroutines.resume
@@ -130,13 +137,12 @@ class CameraViewModel(
                     return@async null
                 }
 
-                // TODO move cropImage to Dispatcher.IO block.
-                val bitmap = cropTextImage(imageProxy) ?: return@async null
 
                 withContext(Dispatchers.IO) {
+                    val bitmap = cropTextImage(imageProxy) ?: return@withContext
                     bitmap.saveToFile(photoFile)
+                    bitmap.recycle()
                 }
-                // TODO: call bitmap.recycle to free resource.
 
                 imageProxy.close()
 
@@ -162,90 +168,90 @@ class CameraViewModel(
         val inputImageCrop = InputImage.fromBitmap(bitmap, 0)
 
         textRecognizer.process(inputImageCrop).addOnSuccessListener { visionText ->
-                val text = visionText.text
+            val text = visionText.text
 
-                for (block in visionText.textBlocks) {
-                    for (line in block.lines) {
-                        val res = line.text.extractTicketNumber()
+            for (block in visionText.textBlocks) {
+                for (line in block.lines) {
+                    val res = line.text.extractTicketNumber()
 
-                        if (res.isNotBlank()) {
-                            _recognizedTicketNumbers.add(res)
-                        }
+                    if (res.isNotBlank()) {
+                        _recognizedTicketNumbers.add(res)
                     }
                 }
-
-                Log.d("zzz", "textRecognizer onSuccess")
-                Log.d("zzzzzz OCR result", "ocr result: $text")
-
-                // TODO: call recycle() on bitmap to free resource
-
-                continuation.resume(_recognizedTicketNumbers.toList())
-            }.addOnFailureListener { exception ->
-                Log.d("zzz", "onFailure")
-
-                // TODO: call recycle() on bitmap to free resource
-
-                continuation.resumeWithException(exception)
             }
+
+            Log.d("zzz", "textRecognizer onSuccess")
+            Log.d("zzzzzz OCR result", "ocr result: $text")
+
+            bitmap.recycle()
+
+            continuation.resume(_recognizedTicketNumbers.toList())
+        }.addOnFailureListener { exception ->
+            Log.d("zzz", "onFailure")
+
+
+            bitmap.recycle()
+            continuation.resumeWithException(exception)
+        }
     }
 
     suspend fun uploadNumbers(
         context: Context,
         numbers: List<String>,
     ) {
-        coroutineScope {
-
-            // this async can't refactor, cause cannot access variables in Dispatchers.IO
-            async {
-                withContext(Dispatchers.IO) {
-                    numbers.forEachIndexed { index, numberStr ->
-                        transformTicketNumberStrToMbdFile(
-                            numberStr, context, index.toString()
-                        )
-                    }
-                }
-            }.await()
-
-            // create multiple coroutine, each one will send mbdfile at once
-            sendAllMbdFiles()
-        }
-    }
-
-    private fun transformTicketNumberStrToMbdFile(
-        ticketNumber: String, context: Context, name: String
-    ) {
-        ticketNumber.saveGeneratedWhiteJpgTo(rootImgPath, name).let { generatedImageFilePath ->
-            generatedImageFilePath.transformAndSaveToTmpRgb(context, rootTmpPath, name)
-
-            (context as MainActivity).generateMBDFile(
-                tmpRgbFilePath.replace("#", name), "$rootMbdPath/${name}.mbd"
-            )
-        }
-    }
-
-    /*
-     * Printer server can receive multiple requests at once
-     *
-     * So sendAllMbdFiles() send all at once instead of one by one
-     */
-    private suspend fun sendAllMbdFiles() {
         _sendResultList.clear()
+        val len = numbers.size
 
         coroutineScope {
-            val deffered = (0 until _recognizedTicketNumbers.size).map { index ->
-                async {
-                    withContext(Dispatchers.IO) {
-                        val res = mbrushRepository.upload(
-                            "$rootMbdPath/${index}.mbd",
-                            index,
-                        ).status
-
-                        _sendResultList.add("发送状态: $res")
+            withContext(Dispatchers.IO) {
+                // generate images
+                val deffered = numbers.mapIndexed() { index, ticketNumber ->
+                    async {
+                        ticketNumber.saveGeneratedWhiteJpgTo(rootImgPath, index.toString())
                     }
                 }
-            }
+                val generatedImagePaths = deffered.map {
+                    it.await()
+                }
 
-            deffered.awaitAll()
+                // save tmp.rgb files
+                generatedImagePaths.forEachIndexed { index, path ->
+                    launch {
+                        path.transformAndSaveToTmpRgb(context, rootTmpPath, index.toString())
+                    }.join()
+                }
+
+                // save to mbd.file
+                (0 until len).mapIndexed { index, s ->
+                    launch {
+                        withContext(Dispatchers.Default) {
+                            (context as MainActivity).generateMBDFile(
+                                tmpRgbFilePath.replace("#", index.toString()),
+                                "$rootMbdPath/${index}.mbd"
+                            )
+                        }
+                    }.join()
+                }
+
+                // send mbd files
+                (0 until len).map { index ->
+                    launch {
+                        withContext(Dispatchers.Default) {
+                            mbrushRepository.upload(
+                                mbdFilePath = "$rootMbdPath/$index.mbd",
+                                index
+                            )
+
+                            coroutineContext[Job]?.invokeOnCompletion {
+                                if (0 == index) {
+                                    MediaActionSound().play(MediaActionSound.STOP_VIDEO_RECORDING)
+                                }
+                                _sendResultList.add("发送结果: OK")
+                            }
+                        }
+                    }
+                }.forEach { it.join() }
+            }
         }
     }
 

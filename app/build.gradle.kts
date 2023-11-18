@@ -108,4 +108,6 @@ dependencies {
      implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
      implementation("org.objenesis:objenesis:3.2")
+
+    implementation("com.github.haroldadmin:WhatTheStack:1.0.0-alpha04")
 }
