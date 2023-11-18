@@ -21,6 +21,7 @@ import com.example.ticketnumberprintfinnal.ui.theme.TicketNumberPrintFinnalTheme
 import com.example.ticketnumberprintfinnal.utils.AspectRatioCameraConfig
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -81,7 +82,7 @@ fun App() {
         when (cameraUIAction) {
             is CameraUIAction.OnCameraClick -> {
 
-                val job = scope.launch {
+                scope.launch {
                     val imageUri = viewModel.takePictureAsync(
                         outputDirectory = viewModel.getOutputDirectory(context)
                     )
@@ -96,14 +97,15 @@ fun App() {
                             return@launch
                         }
 
+                        // TODO: Refactor this method to launch several coroutines,
+                        //  each coroutine is dedicated to genarate one mbd file and send it to server
                         viewModel.uploadNumbers(context, recognizedNumbers)
                     }
-                }
 
-                job.invokeOnCompletion {
-                    MediaActionSound().play(MediaActionSound.STOP_VIDEO_RECORDING)
+                    coroutineContext[Job]?.invokeOnCompletion {
+                        MediaActionSound().play(MediaActionSound.STOP_VIDEO_RECORDING)
+                    }
                 }
-
             }
 
             is CameraUIAction.OnCancelCameraClick -> {

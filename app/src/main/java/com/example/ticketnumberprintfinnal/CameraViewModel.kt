@@ -3,7 +3,9 @@ package com.example.ticketnumberprintfinnal
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.camera.core.ImageCapture
@@ -56,8 +58,7 @@ import kotlin.coroutines.suspendCoroutine
  * @date: 22/7/29
  */
 class CameraViewModel(
-    config: CameraConfig,
-    private val mbrushRepository: MbrushRepository
+    config: CameraConfig, private val mbrushRepository: MbrushRepository
 ) : ViewModel() {
 
     val preview = config.options(Preview.Builder())
@@ -110,7 +111,7 @@ class CameraViewModel(
 
     // Refactory Start
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
-    suspend fun  takePictureAsync(
+    suspend fun takePictureAsync(
         filenameFormat: String = "yyyy-MM-dd-HH-mm-ss-SSS",
         outputDirectory: File,
     ): Uri? {
@@ -118,10 +119,8 @@ class CameraViewModel(
             async {
                 val imageProxy = imageCapture.takePhotoAsync()
                 val photoFile = File(
-                    outputDirectory,
-                    SimpleDateFormat(
-                        filenameFormat,
-                        Locale.US
+                    outputDirectory, SimpleDateFormat(
+                        filenameFormat, Locale.US
                     ).format(System.currentTimeMillis()) + ".jpg"
                 )
 
@@ -131,11 +130,13 @@ class CameraViewModel(
                     return@async null
                 }
 
+                // TODO move cropImage to Dispatcher.IO block.
                 val bitmap = cropTextImage(imageProxy) ?: return@async null
 
                 withContext(Dispatchers.IO) {
                     bitmap.saveToFile(photoFile)
                 }
+                // TODO: call bitmap.recycle to free resource.
 
                 imageProxy.close()
 
@@ -145,17 +146,22 @@ class CameraViewModel(
     }
 
     suspend fun recognizeTicketNumberAsync(
-        context: Context,
-        imageUri: Uri
+        context: Context, imageUri: Uri
     ): List<String> = suspendCoroutine { continuation ->
 
 
-        val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
+        val bitmap = if (Build.VERSION.SDK_INT < 28) {
+            MediaStore.Images.Media.getBitmap(
+                context.contentResolver, imageUri
+            )
+        } else {
+            val source = ImageDecoder.createSource(context.contentResolver, imageUri)
+            ImageDecoder.decodeBitmap(source)
+        }
         Log.e("Main", (bitmap == null).toString())
         val inputImageCrop = InputImage.fromBitmap(bitmap, 0)
 
-        textRecognizer.process(inputImageCrop)
-            .addOnSuccessListener { visionText ->
+        textRecognizer.process(inputImageCrop).addOnSuccessListener { visionText ->
                 val text = visionText.text
 
                 for (block in visionText.textBlocks) {
@@ -171,9 +177,13 @@ class CameraViewModel(
                 Log.d("zzz", "textRecognizer onSuccess")
                 Log.d("zzzzzz OCR result", "ocr result: $text")
 
+                // TODO: call recycle() on bitmap to free resource
+
                 continuation.resume(_recognizedTicketNumbers.toList())
             }.addOnFailureListener { exception ->
                 Log.d("zzz", "onFailure")
+
+                // TODO: call recycle() on bitmap to free resource
 
                 continuation.resumeWithException(exception)
             }
@@ -190,9 +200,7 @@ class CameraViewModel(
                 withContext(Dispatchers.IO) {
                     numbers.forEachIndexed { index, numberStr ->
                         transformTicketNumberStrToMbdFile(
-                            numberStr,
-                            context,
-                            index.toString()
+                            numberStr, context, index.toString()
                         )
                     }
                 }
@@ -204,16 +212,13 @@ class CameraViewModel(
     }
 
     private fun transformTicketNumberStrToMbdFile(
-        ticketNumber: String,
-        context: Context,
-        name: String
+        ticketNumber: String, context: Context, name: String
     ) {
         ticketNumber.saveGeneratedWhiteJpgTo(rootImgPath, name).let { generatedImageFilePath ->
             generatedImageFilePath.transformAndSaveToTmpRgb(context, rootTmpPath, name)
 
             (context as MainActivity).generateMBDFile(
-                tmpRgbFilePath.replace("#", name),
-                "$rootMbdPath/${name}.mbd"
+                tmpRgbFilePath.replace("#", name), "$rootMbdPath/${name}.mbd"
             )
         }
     }
@@ -334,17 +339,14 @@ class CameraViewModel(
                     x = cropTopLeftScale.value.y, y = cropTopLeftScale.value.x
                 ),
                 sizeScale = Size(
-                    width = cropSizeScale.value.height,
-                    height = cropSizeScale.value.width
+                    width = cropSizeScale.value.height, height = cropSizeScale.value.width
                 ),
             ).roundToAndroidRect()
 
             else -> getCropRect(
-                imageWidth.toFloat(),
-                imageHeight.toFloat(),
+                imageWidth.toFloat(), imageHeight.toFloat(),
 
-                topLeftScale = cropTopLeftScale.value,
-                sizeScale = cropSizeScale.value
+                topLeftScale = cropTopLeftScale.value, sizeScale = cropSizeScale.value
             ).roundToAndroidRect()
         }
 
