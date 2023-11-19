@@ -1,13 +1,16 @@
+/*
 #include <jni.h>
 #include <string>
 
 
+*/
 /*
  * Copyright (c) 2019, Kudo, Inc.
  * All rights reserved.
  *
  * Author: Duke Fong <d@d-l.io>
- */
+ *//*
+
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -80,7 +83,9 @@ static inline void save_1byte(const uint8_t *buf, int l, int i, int shift, uint8
 extern "C" JNIEXPORT void JNICALL
 Java_com_example_ticketnumberprintfinnal_MainActivity_generateMBDFile(
         JNIEnv* env,
-        jobject /* this */,
+        jobject */
+/* this *//*
+,
         jstring rgb_file_path, jstring mbd_file_path) {
     int invert = 0;
     int is_cym = 0;
@@ -230,4 +235,4 @@ Java_com_example_ticketnumberprintfinnal_MainActivity_generateMBDFile(
     fclose(f_out);
 
     return;
-}
+}*/

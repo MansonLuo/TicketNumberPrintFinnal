@@ -12,51 +12,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
 
 
-/*static int img_width = -1;
-
-// 4 nozzle groups per colour, there are a total of 684 nozzles, each group has 180 nozzles and only the central 171 are real
-// ch_x: [ nozzle group0: [ line0: [ p0, p1 ... p179], line1: [] ... ], nozzle group1: [], nozzle group2: [], nozzle group3: [] ]
-static uint8_t *ch_c[4];
-static uint8_t *ch_m[4];
-static uint8_t *ch_y[4];
-
-// each byte holds 5 nozzles of data, with 3 bits remaining unused
-// re_x: [ nozzle group0: [ line0: [ byte0, ... byte35], line1: [] ... ], nozzle group1: [], nozzle group2: [], nozzle group3: [] ]
-static uint8_t *re_c[4];
-static uint8_t *re_m[4];
-static uint8_t *re_y[4];
-
-static const uint8_t order_tb[][9] = {
-        {7,5,3,1,8,6,4,2,0},
-        {2,0,7,5,3,1,8,6,4},
-        {3,1,8,6,4,2,0,7,5}
-};
-
-static const int c_shift_md[] = {20, 22, 0, 2};
-static const int m_shift_md[] = {58, 56, 78, 76};       //m
-static const int y_shift_md[] = {114, 112, 134, 132};   //y
-static const int shift_max_md = 134;
-
-static const int c_shift_old[] = {20, 22, 0, 2};
-static const int m_shift_old[] = {66, 64, 86, 84};      //m
-static const int y_shift_old[] = {130, 128, 150, 148};  //y
-static const int shift_max_old = 150;
-
-static int c_shift[4];
-static int m_shift[4];
-static int y_shift[4];
-static int shift_max;*/
-
-static void reorder(uint8_t *buf, const uint8_t *ch_line, uint8_t order)
+void reorder(uint8_t *buf, const uint8_t *ch_line, uint8_t order)
 {
-    static const uint8_t order_tb[][9] = {
+    const uint8_t order_tb[][9] = {
             {7,5,3,1,8,6,4,2,0},
             {2,0,7,5,3,1,8,6,4},
             {3,1,8,6,4,2,0,7,5}
@@ -75,7 +39,7 @@ static void reorder(uint8_t *buf, const uint8_t *ch_line, uint8_t order)
     }
 }
 
-static inline void save_1byte(const uint8_t *buf, int l, int i, int shift, uint8_t *f, int img_width)
+inline void save_1byte(const uint8_t *buf, int l, int i, int shift, uint8_t *f, int img_width)
 {
     if (l < shift || l - shift >= img_width)
         *f = 0;
@@ -89,36 +53,36 @@ Java_com_example_ticketnumberprintfinnal_MainActivity_generateMBDFile(
         jobject /* this */,
         jstring rgb_file_path, jstring mbd_file_path) {
 
-    static int img_width = -1;
+    int img_width = -1;
 
 // 4 nozzle groups per colour, there are a total of 684 nozzles, each group has 180 nozzles and only the central 171 are real
 // ch_x: [ nozzle group0: [ line0: [ p0, p1 ... p179], line1: [] ... ], nozzle group1: [], nozzle group2: [], nozzle group3: [] ]
-    static uint8_t *ch_c[4];
-    static uint8_t *ch_m[4];
-    static uint8_t *ch_y[4];
+    uint8_t *ch_c[4];
+    uint8_t *ch_m[4];
+    uint8_t *ch_y[4];
 
 // each byte holds 5 nozzles of data, with 3 bits remaining unused
 // re_x: [ nozzle group0: [ line0: [ byte0, ... byte35], line1: [] ... ], nozzle group1: [], nozzle group2: [], nozzle group3: [] ]
-    static uint8_t *re_c[4];
-    static uint8_t *re_m[4];
-    static uint8_t *re_y[4];
+    uint8_t *re_c[4];
+    uint8_t *re_m[4];
+    uint8_t *re_y[4];
 
 
 
-    static const int c_shift_md[] = {20, 22, 0, 2};
-    static const int m_shift_md[] = {58, 56, 78, 76};       //m
-    static const int y_shift_md[] = {114, 112, 134, 132};   //y
-    static const int shift_max_md = 134;
+    const int c_shift_md[] = {20, 22, 0, 2};
+    const int m_shift_md[] = {58, 56, 78, 76};       //m
+    const int y_shift_md[] = {114, 112, 134, 132};   //y
+    const int shift_max_md = 134;
 
-    static const int c_shift_old[] = {20, 22, 0, 2};
-    static const int m_shift_old[] = {66, 64, 86, 84};      //m
-    static const int y_shift_old[] = {130, 128, 150, 148};  //y
-    static const int shift_max_old = 150;
+    const int c_shift_old[] = {20, 22, 0, 2};
+    const int m_shift_old[] = {66, 64, 86, 84};      //m
+    const int y_shift_old[] = {130, 128, 150, 148};  //y
+    const int shift_max_old = 150;
 
-    static int c_shift[4];
-    static int m_shift[4];
-    static int y_shift[4];
-    static int shift_max;
+    int c_shift[4];
+    int m_shift[4];
+    int y_shift[4];
+    int shift_max;
 
     int invert = 0;
     int is_cym = 0;
@@ -189,6 +153,8 @@ Java_com_example_ticketnumberprintfinnal_MainActivity_generateMBDFile(
             case 1: order_c = 0; order_m = 2; order_y = 2; break;
             case 2: order_c = 2; order_m = 0; order_y = 0; break;
             case 3: order_c = 1; order_m = 0; order_y = 0; break;
+            default:
+                break;
         }
         for (int j = 0; j < img_width; j++) {
             reorder(re_c[i] + 36 * j, ch_c[i] + 180 * j, order_c);
@@ -266,6 +232,4 @@ Java_com_example_ticketnumberprintfinnal_MainActivity_generateMBDFile(
         free(re_y[i]);
     }
     fclose(f_out);
-
-    return;
 }

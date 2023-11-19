@@ -241,10 +241,10 @@ class CameraViewModel(
                 (0 until len).map { index ->
                     launch {
                         withContext(Dispatchers.Default) {
-                            /*mbrushRepository.upload(
+                            mbrushRepository.upload(
                                 mbdFilePath = "$rootMbdPath/$index.mbd",
                                 index
-                            )*/
+                            )
 
                             coroutineContext[Job]?.invokeOnCompletion {
                                 if (0 == index) {
