@@ -50,7 +50,7 @@ fun String.transformAndSaveToTmpRgb(
     nameOfTmpRgb: String
 ) {
     // generate tmp.rgb file
-    context.getMagick().use {
+    //context.getMagick().use {
         val wand = MagickWand()
         wand.readImage(this)
 
@@ -66,7 +66,7 @@ fun String.transformAndSaveToTmpRgb(
         wand.rotateImage(pixel, 90.00)
 
         wand.writeImage(rootPath + File.separator + "tmp${nameOfTmpRgb}.rgb")
-    }
+    //}
 
 }
 

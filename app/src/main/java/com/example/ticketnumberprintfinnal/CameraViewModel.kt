@@ -22,6 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cherryleafroad.kmagick.Magick
 import com.example.ticketnumberprintfinnal.api.MbrushRepository
 import com.example.ticketnumberprintfinnal.api.WorkingStatu
 import com.example.ticketnumberprintfinnal.api.models.Status
@@ -215,11 +216,14 @@ class CameraViewModel(
                 }
 
                 // save tmp.rgb files
-                generatedImagePaths.forEachIndexed { index, path ->
+                // each coroutine will save one tmp.rgb file.
+                Magick.initialize()
+                generatedImagePaths.mapIndexed { index, path ->
                     launch {
                         path.transformAndSaveToTmpRgb(context, rootTmpPath, index.toString())
-                    }.join()
-                }
+                    }
+                }.forEach { it.join() }
+                Magick.terminate()
 
                 // save to mbd.file
                 (0 until len).mapIndexed { index, s ->
