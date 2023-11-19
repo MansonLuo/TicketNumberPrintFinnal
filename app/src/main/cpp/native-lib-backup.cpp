@@ -19,7 +19,7 @@
 #include <stdbool.h>
 
 
-/*static int img_width = -1;
+static int img_width = -1;
 
 // 4 nozzle groups per colour, there are a total of 684 nozzles, each group has 180 nozzles and only the central 171 are real
 // ch_x: [ nozzle group0: [ line0: [ p0, p1 ... p179], line1: [] ... ], nozzle group1: [], nozzle group2: [], nozzle group3: [] ]
@@ -52,16 +52,10 @@ static const int shift_max_old = 150;
 static int c_shift[4];
 static int m_shift[4];
 static int y_shift[4];
-static int shift_max;*/
+static int shift_max;
 
 static void reorder(uint8_t *buf, const uint8_t *ch_line, uint8_t order)
 {
-    static const uint8_t order_tb[][9] = {
-            {7,5,3,1,8,6,4,2,0},
-            {2,0,7,5,3,1,8,6,4},
-            {3,1,8,6,4,2,0,7,5}
-    };
-
     const uint8_t *p[20];
     for (int i = 0; i < 20; i ++)
         p[i] = ch_line + i * 9;
@@ -75,7 +69,7 @@ static void reorder(uint8_t *buf, const uint8_t *ch_line, uint8_t order)
     }
 }
 
-static inline void save_1byte(const uint8_t *buf, int l, int i, int shift, uint8_t *f, int img_width)
+static inline void save_1byte(const uint8_t *buf, int l, int i, int shift, uint8_t *f)
 {
     if (l < shift || l - shift >= img_width)
         *f = 0;
@@ -88,38 +82,6 @@ Java_com_example_ticketnumberprintfinnal_MainActivity_generateMBDFile(
         JNIEnv* env,
         jobject /* this */,
         jstring rgb_file_path, jstring mbd_file_path) {
-
-    static int img_width = -1;
-
-// 4 nozzle groups per colour, there are a total of 684 nozzles, each group has 180 nozzles and only the central 171 are real
-// ch_x: [ nozzle group0: [ line0: [ p0, p1 ... p179], line1: [] ... ], nozzle group1: [], nozzle group2: [], nozzle group3: [] ]
-    static uint8_t *ch_c[4];
-    static uint8_t *ch_m[4];
-    static uint8_t *ch_y[4];
-
-// each byte holds 5 nozzles of data, with 3 bits remaining unused
-// re_x: [ nozzle group0: [ line0: [ byte0, ... byte35], line1: [] ... ], nozzle group1: [], nozzle group2: [], nozzle group3: [] ]
-    static uint8_t *re_c[4];
-    static uint8_t *re_m[4];
-    static uint8_t *re_y[4];
-
-
-
-    static const int c_shift_md[] = {20, 22, 0, 2};
-    static const int m_shift_md[] = {58, 56, 78, 76};       //m
-    static const int y_shift_md[] = {114, 112, 134, 132};   //y
-    static const int shift_max_md = 134;
-
-    static const int c_shift_old[] = {20, 22, 0, 2};
-    static const int m_shift_old[] = {66, 64, 86, 84};      //m
-    static const int y_shift_old[] = {130, 128, 150, 148};  //y
-    static const int shift_max_old = 150;
-
-    static int c_shift[4];
-    static int m_shift[4];
-    static int y_shift[4];
-    static int shift_max;
-
     int invert = 0;
     int is_cym = 0;
     int is_old = 0;
@@ -217,32 +179,32 @@ Java_com_example_ticketnumberprintfinnal_MainActivity_generateMBDFile(
 
         // the data is arranged according to the spacing of each nozzle groups to ensure that the printout is colour-aligned
         for (int i = 0; i < 36; i += 2) {
-            save_1byte(re_y[0], l, i, y_shift[0], p++, img_width);     // a[4:0]
-            save_1byte(re_y[3], l, i, y_shift[3], p++, img_width);     // b[4:0]
-            save_1byte(re_y[0], l, i+1, y_shift[0], p++, img_width);   // a[4:0]
-            save_1byte(re_y[3], l, i+1, y_shift[3], p++, img_width);   // b[4:0]
-            save_1byte(re_m[3], l, i, m_shift[3], p++, img_width);     // a[4:0]
-            save_1byte(re_m[0], l, i, m_shift[0], p++, img_width);     // b[4:0]
-            save_1byte(re_m[3], l, i+1, m_shift[3], p++, img_width);   // a[4:0]
-            save_1byte(re_m[0], l, i+1, m_shift[0], p++, img_width);   // b[4:0]
-            save_1byte(re_c[3], l, i, c_shift[3], p++, img_width);     // a[4:0]
-            save_1byte(re_c[0], l, i, c_shift[0], p++, img_width);     // b[4:0]
-            save_1byte(re_c[3], l, i+1, c_shift[3], p++, img_width);   // a[4:0]
-            save_1byte(re_c[0], l, i+1, c_shift[0], p++, img_width);   // b[4:0]
+            save_1byte(re_y[0], l, i, y_shift[0], p++);     // a[4:0]
+            save_1byte(re_y[3], l, i, y_shift[3], p++);     // b[4:0]
+            save_1byte(re_y[0], l, i+1, y_shift[0], p++);   // a[4:0]
+            save_1byte(re_y[3], l, i+1, y_shift[3], p++);   // b[4:0]
+            save_1byte(re_m[3], l, i, m_shift[3], p++);     // a[4:0]
+            save_1byte(re_m[0], l, i, m_shift[0], p++);     // b[4:0]
+            save_1byte(re_m[3], l, i+1, m_shift[3], p++);   // a[4:0]
+            save_1byte(re_m[0], l, i+1, m_shift[0], p++);   // b[4:0]
+            save_1byte(re_c[3], l, i, c_shift[3], p++);     // a[4:0]
+            save_1byte(re_c[0], l, i, c_shift[0], p++);     // b[4:0]
+            save_1byte(re_c[3], l, i+1, c_shift[3], p++);   // a[4:0]
+            save_1byte(re_c[0], l, i+1, c_shift[0], p++);   // b[4:0]
         }
         for (int i = 0; i < 36; i += 2) {
-            save_1byte(re_y[1], l, i, y_shift[1], p++, img_width);     // a[4:0]
-            save_1byte(re_y[2], l, i, y_shift[2], p++, img_width);     // b[4:0]
-            save_1byte(re_y[1], l, i+1, y_shift[1], p++, img_width);   // a[4:0]
-            save_1byte(re_y[2], l, i+1, y_shift[2], p++, img_width);   // b[4:0]
-            save_1byte(re_m[2], l, i, m_shift[2], p++, img_width);     // a[4:0]
-            save_1byte(re_m[1], l, i, m_shift[1], p++, img_width);     // b[4:0]
-            save_1byte(re_m[2], l, i+1, m_shift[2], p++, img_width);   // a[4:0]
-            save_1byte(re_m[1], l, i+1, m_shift[1], p++, img_width);   // b[4:0]
-            save_1byte(re_c[2], l, i, c_shift[2], p++, img_width);     // a[4:0]
-            save_1byte(re_c[1], l, i, c_shift[1], p++, img_width);     // b[4:0]
-            save_1byte(re_c[2], l, i+1, c_shift[2], p++, img_width);   // a[4:0]
-            save_1byte(re_c[1], l, i+1, c_shift[1], p++, img_width);   // b[4:0]
+            save_1byte(re_y[1], l, i, y_shift[1], p++);     // a[4:0]
+            save_1byte(re_y[2], l, i, y_shift[2], p++);     // b[4:0]
+            save_1byte(re_y[1], l, i+1, y_shift[1], p++);   // a[4:0]
+            save_1byte(re_y[2], l, i+1, y_shift[2], p++);   // b[4:0]
+            save_1byte(re_m[2], l, i, m_shift[2], p++);     // a[4:0]
+            save_1byte(re_m[1], l, i, m_shift[1], p++);     // b[4:0]
+            save_1byte(re_m[2], l, i+1, m_shift[2], p++);   // a[4:0]
+            save_1byte(re_m[1], l, i+1, m_shift[1], p++);   // b[4:0]
+            save_1byte(re_c[2], l, i, c_shift[2], p++);     // a[4:0]
+            save_1byte(re_c[1], l, i, c_shift[1], p++);     // b[4:0]
+            save_1byte(re_c[2], l, i+1, c_shift[2], p++);   // a[4:0]
+            save_1byte(re_c[1], l, i+1, c_shift[1], p++);   // b[4:0]
         }
 
         fwrite("\x00\x87", 2, 1, f_out); // add 2 byte gap for fpga spi cmd: write REG_TX
